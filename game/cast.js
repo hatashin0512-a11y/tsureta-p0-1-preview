@@ -14,14 +14,14 @@ const clamp01 = (value) => Math.max(0, Math.min(1, value));
 /**
  * @param {number} peakLin Maximum estimated hand speed in m/s.
  * @param {typeof P} [params]
- * @returns {{peakLin:number, power:number, distance:number, label:string}}
+ * @returns {{accepted:boolean, peakLin:number, power:number, distance:number, label:string}}
  */
 export function castResult(peakLin, params = P) {
   const safePeak = Number.isFinite(peakLin) ? Math.max(0, peakLin) : 0;
   const power = clamp01((safePeak - params.castMin) / (params.castFull - params.castMin));
   const distance = params.distMax * power ** 0.85;
   const label = power < .28 ? 'ショートキャスト' : power < .72 ? 'ナイスキャスト' : 'ロングキャスト';
-  return { peakLin: safePeak, power, distance, label };
+  return { accepted: safePeak >= params.castMin, peakLin: safePeak, power, distance, label };
 }
 
 /**

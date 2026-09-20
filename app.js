@@ -3,11 +3,11 @@
 import { requestMotion, startMotion, createMotionTracker } from './lib/sensors.js?v=1';
 import { unlock, load, play } from './lib/audio.js?v=1';
 import { screens, shake, toast, showVersion } from './lib/ui.js?v=2';
-import { listenForCasts } from './game/cast.js?v=1';
+import { listenForCasts } from './game/cast.js?v=2';
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-3.0';
+const VERSION = 'p0-3.1';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
@@ -158,6 +158,23 @@ function prepareCast() {
 
 listenForCasts(tracker, (result) => {
   if (state.screen !== 'cast' || !castArmed || castInFlight) return;
+  document.getElementById('debug-peak').textContent = result.peakLin.toFixed(2);
+  document.getElementById('debug-omega').textContent = result.omega.toFixed(2);
+  document.getElementById('debug-duration').textContent = `${Math.round(result.durMs)} ms`;
+
+  if (!result.accepted) {
+    castArmed = false;
+    document.getElementById('cast-distance').textContent = 'もう一度';
+    document.getElementById('cast-label').textContent = `少し弱すぎました（速さ ${result.peakLin.toFixed(2)} m/s）`;
+    document.getElementById('cast-comparison').textContent = 'もう少しだけ速く、手首を前へシュッと動かしてください。';
+    setTimeout(() => {
+      if (state.screen !== 'cast' || castInFlight) return;
+      castArmed = true;
+      document.getElementById('cast-label').textContent = '再挑戦できます！手首で前へシュッと振ってください';
+    }, 600);
+    return;
+  }
+
   castArmed = false;
   castInFlight = true;
   const scene = document.getElementById('cast-scene');
@@ -166,9 +183,6 @@ listenForCasts(tracker, (result) => {
   const delayMs = 240 + result.power * 560;
   scene.style.setProperty('--flight-ms', `${delayMs}ms`);
   scene.classList.add('cast-fired');
-  document.getElementById('debug-peak').textContent = result.peakLin.toFixed(2);
-  document.getElementById('debug-omega').textContent = result.omega.toFixed(2);
-  document.getElementById('debug-duration').textContent = `${Math.round(result.durMs)} ms`;
   document.getElementById('cast-label').textContent = 'ルアーが飛んでいます…';
   if (audioReady) play('cast-whoosh', { gain: .45 + result.power * .45, rate: .82 + result.power * .5 });
 
