@@ -4,150 +4,276 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#071b2d">
-  <title>釣れた！ 基盤チェック</title>
+  <title>釣れた！ かんたん動作確認</title>
   <style>
     :root { color-scheme: dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100svh; color: #f3fbff; background: radial-gradient(circle at 50% 10%, #174b66, #071b2d 55%, #04101c); }
-    button { min-height: 52px; border: 0; border-radius: 16px; padding: 12px 18px; font: inherit; font-weight: 800; color: #042031; background: #6ee7ff; box-shadow: 0 8px 24px #00131f66; }
-    button:disabled { opacity: .45; box-shadow: none; }
-    button.secondary { color: #eafaff; background: #ffffff14; border: 1px solid #ffffff2b; }
-    main { width: min(100%, 560px); min-height: 100svh; margin: auto; padding: calc(28px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom)); }
-    section[hidden] { display: none; }
-    .hero { min-height: calc(100svh - 52px); display: grid; align-content: center; gap: 18px; text-align: center; }
-    .logo { margin: 0; font-size: clamp(44px, 15vw, 78px); letter-spacing: -.08em; line-height: 1; }
-    .lead { margin: 0 auto; max-width: 28em; color: #c3dfeb; line-height: 1.7; }
-    .start { width: 100%; font-size: 18px; }
-    .notice { margin: 0; color: #94bdcd; font-size: 13px; line-height: 1.6; }
-    .top { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    h2 { margin: 0; font-size: 27px; }
-    .badge { border-radius: 999px; padding: 5px 10px; color: #8eeaff; background: #56d6ff1b; border: 1px solid #65dcff45; font-size: 12px; font-weight: 800; }
-    canvas { display: block; width: 100%; aspect-ratio: 9 / 12; border-radius: 24px; background: #08263a; box-shadow: 0 18px 44px #0008; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
-    .metric { border-radius: 14px; padding: 10px 8px; text-align: center; background: #ffffff0d; border: 1px solid #ffffff17; }
-    .metric b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
-    .metric span { color: #9bc3d3; font-size: 11px; }
-    .status { min-height: 44px; margin: 0 0 10px; border-radius: 14px; padding: 11px 13px; color: #c8e6ef; background: #02111d80; line-height: 1.5; font-size: 13px; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-    .actions button:first-child { grid-column: 1 / -1; }
-    video { display: none; width: 100%; margin-top: 12px; border-radius: 18px; background: #000; }
+    body { margin: 0; min-height: 100svh; color: #f3fbff; background: radial-gradient(circle at 50% 0%, #18516c, #071b2d 48%, #04101c); }
+    button { min-height: 50px; border: 0; border-radius: 15px; padding: 11px 15px; font: inherit; font-weight: 800; color: #042031; background: #6ee7ff; box-shadow: 0 8px 22px #00131f66; }
+    button:disabled { opacity: .42; box-shadow: none; }
+    button.secondary { color: #eafaff; background: #ffffff12; border: 1px solid #ffffff2b; box-shadow: none; }
+    button.good { color: #06271b; background: #72efad; }
+    button.bad { color: #ffe9e9; background: #a93846; }
+    main { width: min(100%, 560px); min-height: 100svh; margin: auto; padding: calc(28px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom)); }
+    section[hidden], [hidden] { display: none !important; }
+    .hero { min-height: calc(100svh - 58px); display: grid; align-content: center; gap: 18px; text-align: center; }
+    .logo { margin: 0; font-size: clamp(46px, 16vw, 78px); letter-spacing: -.08em; line-height: 1; }
+    .lead { margin: 0 auto; max-width: 29em; color: #d2e8f0; line-height: 1.75; }
+    .start { width: 100%; font-size: 19px; }
+    .notice { margin: 0; color: #9fc5d3; font-size: 13px; line-height: 1.65; }
+    .badge { display: inline-block; border-radius: 999px; padding: 5px 10px; color: #8eeaff; background: #56d6ff1b; border: 1px solid #65dcff45; font-size: 12px; font-weight: 800; }
+    .top { margin-bottom: 14px; }
+    h2 { margin: 6px 0 3px; font-size: 29px; }
+    .top p { margin: 0; color: #acd0dc; font-size: 14px; }
+    .score { position: sticky; top: calc(8px + env(safe-area-inset-top)); z-index: 5; margin-bottom: 12px; border-radius: 17px; padding: 13px 15px; text-align: center; font-size: 17px; font-weight: 900; color: #071b2d; background: #f0b84f; box-shadow: 0 9px 24px #00101da6; }
+    .score.all-pass { background: #72efad; }
+    .score.has-fail { color: #fff; background: #b63e4c; }
+    canvas { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 20px; background: #08263a; box-shadow: 0 14px 32px #0007; }
+    .checks { display: grid; gap: 12px; margin-top: 13px; }
+    .check { position: relative; overflow: hidden; border-radius: 19px; padding: 16px; background: #ffffff0d; border: 2px solid #ffffff18; transition: border-color .2s, background .2s; }
+    .check[data-result="pass"] { border-color: #64e5a2; background: #153f36; }
+    .check[data-result="fail"] { border-color: #ef7380; background: #481e29; }
+    .check-head { display: grid; grid-template-columns: 38px 1fr; gap: 11px; align-items: center; }
+    .step { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; color: #092336; background: #7ce6ff; font-weight: 900; }
+    .check[data-result="pass"] .step { background: #72efad; }
+    .check[data-result="fail"] .step { color: #fff; background: #d85262; }
+    .check h3 { margin: 0; font-size: 18px; }
+    .purpose { margin: 11px 0 0; color: #bedbe5; line-height: 1.6; font-size: 14px; }
+    .instruction { margin: 11px 0; border-radius: 12px; padding: 11px 12px; color: #fff; background: #00121e88; line-height: 1.55; font-weight: 750; }
+    .state { margin: 11px 0 0; color: #8eeaff; font-weight: 900; }
+    .check[data-result="pass"] .state { color: #82f2b7; }
+    .check[data-result="fail"] .state { color: #ff9faa; }
+    .answers, .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 11px; }
+    .row.single { grid-template-columns: 1fr; }
+    video { display: none; width: 100%; margin-top: 12px; border-radius: 15px; background: #000; }
     video.ready { display: block; }
+    details { margin-top: 15px; border-radius: 15px; padding: 12px 14px; color: #aacbd7; background: #ffffff09; font-size: 13px; line-height: 1.6; }
+    summary { color: #d6eef5; font-weight: 800; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
+    .metric { border-radius: 12px; padding: 8px 5px; text-align: center; background: #0003; }
+    .metric b { display: block; color: #fff; font-size: 16px; font-variant-numeric: tabular-nums; }
+    .metric span { font-size: 10px; }
   </style>
 </head>
 <body>
   <main>
     <section id="intro" class="hero">
-      <p class="badge">P0-1 基盤チェック</p>
+      <p><span class="badge">約1分の動作確認</span></p>
       <h1 class="logo">釣れた！</h1>
-      <p class="lead">モーション、音、録画、釣果カード保存を、この1ページで確認します。</p>
-      <button id="start" class="start">タップしてはじめる</button>
-      <p class="notice">端末を振る前に、周囲に人や物がないことを確認してください。この確認画面では振らなくても全機能を試せます。</p>
+      <p class="lead">画面に書かれた順番で5つ確認します。<br><strong>全部が緑になればOKです。</strong></p>
+      <button id="start" class="start">確認をはじめる</button>
+      <p class="notice">最初にiPhoneから確認が出たら「許可」を押してください。強く振る必要はありません。</p>
     </section>
 
     <section id="lab" hidden>
       <header class="top">
-        <div><span class="badge">FOUNDATION LAB</span><h2>実機チェック</h2></div>
-        <button id="recalibrate" class="secondary">再調整</button>
+        <span class="badge">かんたん動作確認</span>
+        <h2>上から順番に試してください</h2>
+        <p>数字の意味を理解する必要はありません。</p>
       </header>
-      <canvas id="stage" width="720" height="960" aria-label="水面のアニメーション"></canvas>
-      <div class="grid">
-        <div class="metric"><b id="peak">0.00</b><span>速さ m/s</span></div>
-        <div class="metric"><b id="omega">0.00</b><span>回転 rad/s</span></div>
-        <div class="metric"><b id="upness">0.00</b><span>上向き</span></div>
+      <div id="score" class="score">確認済み 0 / 5</div>
+      <canvas id="stage" width="720" height="480" aria-label="水面のアニメーション"></canvas>
+
+      <div class="checks">
+        <article class="check" data-check="motion">
+          <div class="check-head"><span class="step">1</span><h3>携帯の動きを確認</h3></div>
+          <p class="purpose">ゲームが携帯の動きを受け取れているか確認します。</p>
+          <p class="instruction">携帯を持って、左右へゆっくり傾けてください。</p>
+          <p class="state">判定を待っています…</p>
+        </article>
+
+        <article class="check" data-check="audio">
+          <div class="check-head"><span class="step">2</span><h3>普通の音を確認</h3></div>
+          <p class="purpose">ゲームの音がiPhoneから出るか確認します。</p>
+          <p class="instruction">「音を鳴らす」を押すと短い音が鳴ります。</p>
+          <div class="row single"><button id="playNow">音を鳴らす</button></div>
+          <p id="audioState" class="state">まだ確認していません</p>
+          <div class="answers">
+            <button class="good" data-answer="audio" data-result="pass">聞こえた</button>
+            <button class="bad" data-answer="audio" data-result="fail">聞こえない</button>
+          </div>
+        </article>
+
+        <article class="check" data-check="keepAlive">
+          <div class="check-head"><span class="step">3</span><h3>時間が経った後の音を確認</h3></div>
+          <p class="purpose">iPhoneでは、時間が経つとゲーム音が止まる場合があります。それを防げているか確認します。</p>
+          <p class="instruction">操作は不要です。開始から30秒後に自動で音が鳴ります。</p>
+          <p id="keepAliveState" class="state">30秒後の音まで 残り30秒</p>
+          <div id="keepAliveAnswers" class="answers" hidden>
+            <button class="good" data-answer="keepAlive" data-result="pass">聞こえた</button>
+            <button class="bad" data-answer="keepAlive" data-result="fail">聞こえない</button>
+          </div>
+          <div id="keepAliveReplay" class="row single" hidden><button id="replay30" class="secondary">もう一度鳴らす</button></div>
+        </article>
+
+        <article class="check" data-check="record">
+          <div class="check-head"><span class="step">4</span><h3>音付き動画を確認</h3></div>
+          <p class="purpose">ゲーム画面を、音も一緒に動画として保存できるか確認します。</p>
+          <p class="instruction">「4秒動画を作る」を押し、完成した動画を再生してください。</p>
+          <div class="row single"><button id="record">4秒動画を作る</button></div>
+          <video id="preview" playsinline controls></video>
+          <p id="recordState" class="state">まだ確認していません</p>
+          <div id="recordAnswers" class="answers" hidden>
+            <button class="good" data-answer="record" data-result="pass">動画で音が聞こえた</button>
+            <button class="bad" data-answer="record" data-result="fail">動画が無音だった</button>
+          </div>
+          <div class="row"><button id="saveVideo" class="secondary" disabled>動画を保存</button><button id="redoVideo" class="secondary" disabled>作り直す</button></div>
+        </article>
+
+        <article class="check" data-check="card">
+          <div class="check-head"><span class="step">5</span><h3>結果画像の保存を確認</h3></div>
+          <p class="purpose">動画が使えない場合でも、釣果を画像で共有できるか確認します。</p>
+          <p class="instruction">「結果画像を保存」を押し、iPhoneの共有画面から保存してください。</p>
+          <div class="row single"><button id="saveCard">結果画像を保存</button></div>
+          <p id="cardState" class="state">まだ確認していません</p>
+          <div id="cardAnswers" class="answers" hidden>
+            <button class="good" data-answer="card" data-result="pass">保存できた</button>
+            <button class="bad" data-answer="card" data-result="fail">保存できない</button>
+          </div>
+        </article>
       </div>
-      <p id="status" class="status">準備中…</p>
-      <div class="actions">
-        <button id="sound30" disabled>30秒後の音を確認</button>
-        <button id="record">4秒動画を録画</button>
-        <button id="saveVideo" class="secondary" disabled>動画を保存</button>
-        <button id="saveCard" class="secondary">カードPNGを保存</button>
-      </div>
-      <video id="preview" playsinline controls></video>
+
+      <details>
+        <summary>開発者向けの数字（普段は見なくてOK）</summary>
+        <p>速さは将来の投げる強さ、回転は携帯を回す速さ、上向きは振り上げ方向の判定材料です。静止中の小さなセンサーノイズは合否に使いません。</p>
+        <div class="grid">
+          <div class="metric"><b id="peak">0.00</b><span>速さ m/s</span></div>
+          <div class="metric"><b id="omega">0.00</b><span>回転 rad/s</span></div>
+          <div class="metric"><b id="upness">停止中</b><span>上向き</span></div>
+        </div>
+      </details>
     </section>
   </main>
 
   <script type="module">
-    import { requestMotion, startMotion, createMotionTracker } from './sensors.js?v=1';
-    import { unlock, load, play } from './audio.js?v=1';
-    import { isRecordingSupported, startRecording, stopRecording, shareBlob, renderResultCard } from './capture.js?v=1';
-    import { screens, shake, toast, showVersion } from './ui.js?v=1';
+    import { requestMotion, startMotion, createMotionTracker } from './sensors.js?v=2';
+    import { unlock, load, play } from './audio.js?v=2';
+    import { isRecordingSupported, startRecording, stopRecording, shareBlob, renderResultCard } from './capture.js?v=2';
+    import { screens, shake, toast, showVersion } from './ui.js?v=2';
 
-    const VERSION = 'p0-1.1';
+    const VERSION = 'p0-1.2';
+    const CHECK_NAMES = ['motion', 'audio', 'keepAlive', 'record', 'card'];
+    const results = Object.fromEntries(CHECK_NAMES.map((name) => [name, null]));
     const view = screens(['intro', 'lab']);
     const tracker = createMotionTracker();
     const $ = (id) => document.getElementById(id);
     const canvas = $('stage');
     const context = canvas.getContext('2d');
-    let motionReady = false;
     let audioReady = false;
     let lastVideo = null;
     let lastVideoUrl = null;
     let ripple = 0;
+    let meaningfulMotionAt = 0;
 
     showVersion(VERSION);
     view.show('intro');
+
+    function setResult(name, result, message) {
+      results[name] = result;
+      const card = document.querySelector(`[data-check="${name}"]`);
+      const state = card.querySelector('.state');
+      card.dataset.result = result;
+      state.textContent = `${result === 'pass' ? '✅ OK：' : '❌ 要確認：'}${message}`;
+      updateScore();
+    }
+
+    function updateScore() {
+      const pass = Object.values(results).filter((value) => value === 'pass').length;
+      const fail = Object.values(results).filter((value) => value === 'fail').length;
+      const answered = pass + fail;
+      const score = $('score');
+      score.className = `score${fail ? ' has-fail' : answered === CHECK_NAMES.length ? ' all-pass' : ''}`;
+      if (answered === CHECK_NAMES.length && fail === 0) score.textContent = '🎉 5 / 5　すべてOKです！';
+      else if (fail) score.textContent = `OK ${pass}件・要確認 ${fail}件`;
+      else score.textContent = `確認済み ${answered} / 5`;
+    }
 
     $('start').addEventListener('click', async () => {
       $('start').disabled = true;
       $('start').textContent = '準備しています…';
 
-      // Both permission-sensitive operations begin in this same tap handler.
       const motionPromise = requestMotion();
       const audioPromise = unlock();
       const [motionResult, audioResult] = await Promise.allSettled([motionPromise, audioPromise]);
-      motionReady = motionResult.status === 'fulfilled' && motionResult.value;
+      const motionReady = motionResult.status === 'fulfilled' && motionResult.value;
       audioReady = audioResult.status === 'fulfilled';
+      view.show('lab');
+
+      if (motionReady) {
+        startMotion((frame) => {
+          tracker.update(frame);
+          const rotation = Math.hypot(frame.rot.x, frame.rot.y, frame.rot.z);
+          if (rotation > .35 && results.motion !== 'pass') {
+            meaningfulMotionAt = performance.now();
+            ripple = .8;
+            setResult('motion', 'pass', '携帯の動きを受け取れました');
+          }
+          if (rotation > .15) meaningfulMotionAt = performance.now();
+        });
+      } else {
+        setResult('motion', 'fail', 'モーションが許可されていません');
+      }
 
       if (audioReady) {
         try {
-          await load('check', new URL('../sounds/check.wav?v=1', import.meta.url).href);
-          play('check', { gain: .7 });
+          await load('check', new URL('../sounds/check.wav?v=2', import.meta.url).href);
         } catch (error) {
           audioReady = false;
+          setResult('audio', 'fail', '音の準備に失敗しました');
           console.error(error);
         }
+      } else {
+        setResult('audio', 'fail', '音を開始できませんでした');
       }
 
-      if (motionReady) startMotion((frame) => tracker.update(frame));
-      view.show('lab');
-      updateStatus();
+      if (!isRecordingSupported()) {
+        $('record').disabled = true;
+        setResult('record', 'fail', 'この端末はアプリ内録画に対応していません');
+      }
 
+      let remaining = 30;
+      const countdown = setInterval(() => {
+        remaining -= 1;
+        if (remaining > 0) $('keepAliveState').textContent = `30秒後の音まで 残り${remaining}秒`;
+        else clearInterval(countdown);
+      }, 1000);
       setTimeout(() => {
-        $('sound30').disabled = !audioReady;
+        $('keepAliveAnswers').hidden = false;
+        $('keepAliveReplay').hidden = false;
         if (audioReady) {
-          play('check', { gain: .7 });
-          $('status').textContent = '✅ 30秒後も自動で音を鳴らしました。聞こえたら音声保持OKです。';
-          toast('30秒後の音を再生しました');
+          play('check', { gain: .75 });
+          $('keepAliveState').textContent = '🔊 いま音を鳴らしました。聞こえましたか？';
+          toast('30秒後の確認音を鳴らしました');
+        } else {
+          setResult('keepAlive', 'fail', '音の準備ができていません');
         }
       }, 30_000);
     });
 
-    function updateStatus() {
-      const parts = [
-        motionReady ? '✅ モーション許可OK' : '⚠️ モーション未対応・未許可',
-        audioReady ? '✅ 音OK' : '⚠️ 音の準備に失敗',
-        isRecordingSupported() ? '✅ 録画対応' : '⚠️ 動画非対応（PNGは利用可）',
-      ];
-      $('status').textContent = parts.join('　');
-      $('record').disabled = !isRecordingSupported() || !audioReady;
-    }
+    $('playNow').addEventListener('click', () => {
+      if (!audioReady) return setResult('audio', 'fail', '音の準備ができていません');
+      play('check', { gain: .75 });
+      $('audioState').textContent = '🔊 いま音を鳴らしました。聞こえましたか？';
+    });
+    $('replay30').addEventListener('click', () => audioReady && play('check', { gain: .75 }));
 
-    tracker.onStroke((stroke) => {
-      ripple = Math.min(1, .25 + stroke.peakLin / 4);
-      shake(Math.min(1.6, .5 + stroke.peakLin / 4));
-      toast(`振りを検出：${stroke.peakLin.toFixed(2)} m/s`);
+    document.querySelectorAll('[data-answer]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const messages = {
+          audio: button.dataset.result === 'pass' ? '普通の音が聞こえました' : '普通の音が聞こえません',
+          keepAlive: button.dataset.result === 'pass' ? '30秒後も音が聞こえました' : '30秒後の音が聞こえません',
+          record: button.dataset.result === 'pass' ? '録画した動画にも音が入っています' : '録画した動画が無音です',
+          card: button.dataset.result === 'pass' ? '結果画像を保存できました' : '結果画像を保存できません',
+        };
+        setResult(button.dataset.answer, button.dataset.result, messages[button.dataset.answer]);
+      });
     });
 
-    $('recalibrate').addEventListener('click', () => {
-      tracker.calibrate();
-      toast('0.5秒静止して再調整します');
-    });
-    $('sound30').addEventListener('click', () => play('check', { gain: .7 }));
-
-    $('record').addEventListener('click', async () => {
+    async function recordVideo() {
       const button = $('record');
       button.disabled = true;
       button.textContent = '録画中 4…';
+      $('recordState').textContent = '録画しています。携帯はそのままでOKです。';
       try {
         startRecording(canvas);
         play('check', { gain: .8 });
@@ -163,63 +289,65 @@
         lastVideoUrl = URL.createObjectURL(lastVideo);
         $('preview').src = lastVideoUrl;
         $('preview').classList.add('ready');
+        $('recordAnswers').hidden = false;
         $('saveVideo').disabled = false;
-        $('status').textContent = '✅ 録画完了。下の動画を再生して、映像と4回の音を確認してください。';
-        toast('録画できました');
+        $('redoVideo').disabled = false;
+        $('recordState').textContent = '▶️ 動画を再生し、4回の音が聞こえるか確認してください。';
       } catch (error) {
         console.error(error);
-        $('status').textContent = `⚠️ 録画できませんでした：${error.message}`;
+        setResult('record', 'fail', `録画できませんでした（${error.message}）`);
       } finally {
         button.disabled = false;
-        button.textContent = '4秒動画を録画';
+        button.textContent = '4秒動画を作る';
       }
-    });
+    }
 
+    $('record').addEventListener('click', recordVideo);
+    $('redoVideo').addEventListener('click', recordVideo);
     $('saveVideo').addEventListener('click', async () => {
-      if (!lastVideo) return;
-      await shareBlob(lastVideo, '#釣れた 基盤録画テスト');
+      if (lastVideo) await shareBlob(lastVideo, '#釣れた 基盤録画テスト');
     });
 
     $('saveCard').addEventListener('click', async () => {
-      const blob = await renderResultCard((ctx, card) => {
-        const gradient = ctx.createLinearGradient(0, 0, 0, card.height);
-        gradient.addColorStop(0, '#0b6b8b');
-        gradient.addColorStop(.55, '#073553');
-        gradient.addColorStop(1, '#041522');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, card.width, card.height);
-        ctx.fillStyle = '#8be9ff22';
-        for (let i = 0; i < 8; i += 1) {
-          ctx.beginPath();
-          ctx.arc(140 + i * 145, 390 + Math.sin(i) * 60, 85 + i * 6, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#91ecff';
-        ctx.font = '700 42px system-ui';
-        ctx.fillText('MOTION FISHING', card.width / 2, 155);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 116px system-ui';
-        ctx.fillText('釣れた！', card.width / 2, 300);
-        ctx.font = '900 210px system-ui';
-        ctx.fillText('🐟', card.width / 2, 630);
-        ctx.font = '800 54px system-ui';
-        ctx.fillText('基盤チェック成功', card.width / 2, 790);
-        ctx.fillStyle = '#c6e9f3';
-        ctx.font = '500 34px system-ui';
-        ctx.fillText(`最高速度 ${tracker.peakLin.toFixed(2)} m/s`, card.width / 2, 870);
-        ctx.fillStyle = '#ffffff18';
-        ctx.fillRect(110, 965, 860, 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 32px system-ui';
-        ctx.fillText('釣れた！ 体感フィッシング', card.width / 2, 1070);
-        ctx.fillStyle = '#9fc6d4';
-        ctx.font = '500 26px system-ui';
-        ctx.fillText(location.origin + location.pathname.replace(/\/lib\/demo\.html$/, '/'), card.width / 2, 1130);
-        ctx.font = '700 28px system-ui';
-        ctx.fillText('#釣れた', card.width / 2, 1235);
-      });
-      await shareBlob(blob, '釣れた！体感フィッシング #釣れた');
+      try {
+        const blob = await renderResultCard((ctx, card) => {
+          const gradient = ctx.createLinearGradient(0, 0, 0, card.height);
+          gradient.addColorStop(0, '#0b6b8b');
+          gradient.addColorStop(.55, '#073553');
+          gradient.addColorStop(1, '#041522');
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, 0, card.width, card.height);
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#91ecff';
+          ctx.font = '700 42px system-ui';
+          ctx.fillText('MOTION FISHING', card.width / 2, 155);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 116px system-ui';
+          ctx.fillText('釣れた！', card.width / 2, 300);
+          ctx.font = '900 210px system-ui';
+          ctx.fillText('🐟', card.width / 2, 630);
+          ctx.font = '800 54px system-ui';
+          ctx.fillText('動作確認カード', card.width / 2, 790);
+          ctx.fillStyle = '#c6e9f3';
+          ctx.font = '500 34px system-ui';
+          ctx.fillText('体感フィッシング開発中！', card.width / 2, 870);
+          ctx.fillStyle = '#ffffff18';
+          ctx.fillRect(110, 965, 860, 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '700 32px system-ui';
+          ctx.fillText('釣れた！ 体感フィッシング', card.width / 2, 1070);
+          ctx.fillStyle = '#9fc6d4';
+          ctx.font = '500 24px system-ui';
+          ctx.fillText(location.origin + location.pathname.replace(/\/lib\/demo\.html$/, '/'), card.width / 2, 1130);
+          ctx.font = '700 28px system-ui';
+          ctx.fillText('#釣れた', card.width / 2, 1235);
+        });
+        await shareBlob(blob, '釣れた！体感フィッシング #釣れた');
+        $('cardAnswers').hidden = false;
+        $('cardState').textContent = '保存画面を開きました。保存できたか教えてください。';
+      } catch (error) {
+        if (error.name !== 'AbortError') setResult('card', 'fail', `画像を作れませんでした（${error.message}）`);
+      }
     });
 
     function draw(now) {
@@ -228,41 +356,39 @@
       const height = canvas.height;
       const sky = context.createLinearGradient(0, 0, 0, height);
       sky.addColorStop(0, '#164f6e');
-      sky.addColorStop(.46, '#0b3049');
       sky.addColorStop(1, '#061926');
       context.fillStyle = sky;
       context.fillRect(0, 0, width, height);
       context.fillStyle = '#d9f7ff';
       context.beginPath();
-      context.arc(560, 150, 52, 0, Math.PI * 2);
+      context.arc(580, 95, 40, 0, Math.PI * 2);
       context.fill();
-      context.fillStyle = '#92e8ff18';
-      for (let y = 430; y < height; y += 42) {
+      for (let y = 235; y < height; y += 34) {
         context.beginPath();
         for (let x = 0; x <= width; x += 12) {
-          const wave = y + Math.sin(x / 65 + t * 2.2 + y / 90) * 8;
+          const wave = y + Math.sin(x / 65 + t * 2.2 + y / 90) * 7;
           if (x === 0) context.moveTo(x, wave); else context.lineTo(x, wave);
         }
         context.lineWidth = 3;
         context.strokeStyle = '#7ce6ff35';
         context.stroke();
       }
-      ripple *= .976;
+      ripple *= .974;
       context.beginPath();
-      context.arc(width / 2, 620, 40 + ripple * 250, 0, Math.PI * 2);
+      context.arc(width / 2, 305, 28 + ripple * 150, 0, Math.PI * 2);
       context.strokeStyle = `rgba(124,230,255,${.18 + ripple * .65})`;
-      context.lineWidth = 8;
+      context.lineWidth = 7;
       context.stroke();
       context.textAlign = 'center';
       context.fillStyle = '#ffffff';
-      context.font = '900 64px system-ui';
-      context.fillText('釣れた！', width / 2, 105);
+      context.font = '900 58px system-ui';
+      context.fillText('釣れた！', width / 2, 90);
       context.fillStyle = '#b8dae5';
-      context.font = '600 28px system-ui';
-      context.fillText('音付きアプリ内録画テスト', width / 2, 910);
+      context.font = '600 25px system-ui';
+      context.fillText('動かすと水面が反応します', width / 2, 440);
       $('peak').textContent = tracker.peakLin.toFixed(2);
       $('omega').textContent = tracker.omega.toFixed(2);
-      $('upness').textContent = tracker.upness.toFixed(2);
+      $('upness').textContent = performance.now() - meaningfulMotionAt < 800 ? tracker.upness.toFixed(2) : '停止中';
       requestAnimationFrame(draw);
     }
     requestAnimationFrame(draw);
