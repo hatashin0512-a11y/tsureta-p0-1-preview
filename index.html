@@ -87,6 +87,7 @@
     #cast-distance { display: block; font-size: 46px; font-weight: 950; letter-spacing: -.05em; text-shadow: 0 5px 20px #001827; }
     #cast-label { display: block; min-height: 22px; color: #c9ebf3; font-size: 13px; font-weight: 750; }
     .cast-help { margin: 12px 0 0; border-radius: 14px; padding: 11px 12px; color: #d7edf3; background: #ffffff0b; border: 1px solid #ffffff19; font-size: 13px; line-height: 1.55; }
+    .cast-comparison { min-height: 21px; margin: 9px 0 0; color: #86efbd; font-size: 13px; font-weight: 800; line-height: 1.5; }
     .debug-toggle { width: 100%; min-height: 40px; margin-top: 9px; font-size: 12px; }
     .cast-debug { margin-top: 8px; border-radius: 13px; padding: 10px 12px; color: #9ed6e5; background: #020c13c7; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.7; }
     .cast-debug b { color: #fff; }
@@ -166,6 +167,7 @@
         <div class="cast-readout"><strong id="cast-distance">--.- m</strong><span id="cast-label">0.5秒だけ止めて構えます</span></div>
       </div>
       <p class="cast-help"><b>座ったままでOK！</b><br>肘を大きく振らず、手首でスマホを前へ「シュッ」と動かしてください。</p>
+      <p id="cast-comparison" class="cast-comparison">まずは弱めに1回投げてみましょう。</p>
       <button id="debug-toggle" class="secondary debug-toggle" aria-expanded="false">開発者向け数値を表示</button>
       <div id="cast-debug" class="cast-debug" hidden>peakLin: <b id="debug-peak">0.00</b> m/s<br>omega: <b id="debug-omega">0.00</b> rad/s<br>duration: <b id="debug-duration">0 ms</b></div>
       <div class="footer-actions"><button id="cast-next" data-go="bite" hidden>着水！次へ進む</button><button id="cast-recalibrate" class="secondary">構え直す</button></div>

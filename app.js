@@ -22,6 +22,7 @@ let audioReady = false;
 let castArmed = false;
 let castInFlight = false;
 let splashTimer = 0;
+let previousDistance = null;
 
 showVersion(VERSION);
 show('title');
@@ -145,6 +146,7 @@ function prepareCast() {
   document.getElementById('cast-label').textContent = '0.5秒だけ止めて構えます';
   document.getElementById('cast-next').hidden = true;
   document.getElementById('cast-recalibrate').hidden = false;
+  document.getElementById('cast-recalibrate').textContent = previousDistance === null ? '構え直す' : 'もう一度投げる';
   setTimeout(() => {
     if (state.screen !== 'cast') return;
     castArmed = motionReady;
@@ -176,7 +178,17 @@ listenForCasts(tracker, (result) => {
     shake(.45 + result.power * .35);
     document.getElementById('cast-distance').textContent = `${result.distance.toFixed(1)} m`;
     document.getElementById('cast-label').textContent = `${result.label}！`;
+    const comparison = document.getElementById('cast-comparison');
+    if (previousDistance === null) {
+      comparison.textContent = '1回目を記録しました。「もう一度投げる」で強さを変えて比べられます。';
+    } else {
+      const difference = result.distance - previousDistance;
+      comparison.textContent = Math.abs(difference) < .5
+        ? '前回とほぼ同じ飛距離です。'
+        : `前回より ${Math.abs(difference).toFixed(1)} m ${difference > 0 ? '遠く' : '短く'}飛びました。`;
+    }
+    previousDistance = result.distance;
     document.getElementById('cast-next').hidden = false;
-    document.getElementById('cast-recalibrate').hidden = true;
+    document.getElementById('cast-recalibrate').textContent = 'もう一度投げる';
   }, delayMs);
 });
