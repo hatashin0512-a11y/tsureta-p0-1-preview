@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#071b2d">
+  <title>釣れた！ 基盤チェック</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100svh; color: #f3fbff; background: radial-gradient(circle at 50% 10%, #174b66, #071b2d 55%, #04101c); }
+    button { min-height: 52px; border: 0; border-radius: 16px; padding: 12px 18px; font: inherit; font-weight: 800; color: #042031; background: #6ee7ff; box-shadow: 0 8px 24px #00131f66; }
+    button:disabled { opacity: .45; box-shadow: none; }
+    button.secondary { color: #eafaff; background: #ffffff14; border: 1px solid #ffffff2b; }
+    main { width: min(100%, 560px); min-height: 100svh; margin: auto; padding: calc(28px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom)); }
+    section[hidden] { display: none; }
+    .hero { min-height: calc(100svh - 52px); display: grid; align-content: center; gap: 18px; text-align: center; }
+    .logo { margin: 0; font-size: clamp(44px, 15vw, 78px); letter-spacing: -.08em; line-height: 1; }
+    .lead { margin: 0 auto; max-width: 28em; color: #c3dfeb; line-height: 1.7; }
+    .start { width: 100%; font-size: 18px; }
+    .notice { margin: 0; color: #94bdcd; font-size: 13px; line-height: 1.6; }
+    .top { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    h2 { margin: 0; font-size: 27px; }
+    .badge { border-radius: 999px; padding: 5px 10px; color: #8eeaff; background: #56d6ff1b; border: 1px solid #65dcff45; font-size: 12px; font-weight: 800; }
+    canvas { display: block; width: 100%; aspect-ratio: 9 / 12; border-radius: 24px; background: #08263a; box-shadow: 0 18px 44px #0008; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+    .metric { border-radius: 14px; padding: 10px 8px; text-align: center; background: #ffffff0d; border: 1px solid #ffffff17; }
+    .metric b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+    .metric span { color: #9bc3d3; font-size: 11px; }
+    .status { min-height: 44px; margin: 0 0 10px; border-radius: 14px; padding: 11px 13px; color: #c8e6ef; background: #02111d80; line-height: 1.5; font-size: 13px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .actions button:first-child { grid-column: 1 / -1; }
+    video { display: none; width: 100%; margin-top: 12px; border-radius: 18px; background: #000; }
+    video.ready { display: block; }
+  </style>
+</head>
+<body>
+  <main>
+    <section id="intro" class="hero">
+      <p class="badge">P0-1 基盤チェック</p>
+      <h1 class="logo">釣れた！</h1>
+      <p class="lead">モーション、音、録画、釣果カード保存を、この1ページで確認します。</p>
+      <button id="start" class="start">タップしてはじめる</button>
+      <p class="notice">端末を振る前に、周囲に人や物がないことを確認してください。この確認画面では振らなくても全機能を試せます。</p>
+    </section>
+
+    <section id="lab" hidden>
+      <header class="top">
+        <div><span class="badge">FOUNDATION LAB</span><h2>実機チェック</h2></div>
+        <button id="recalibrate" class="secondary">再調整</button>
+      </header>
+      <canvas id="stage" width="720" height="960" aria-label="水面のアニメーション"></canvas>
+      <div class="grid">
+        <div class="metric"><b id="peak">0.00</b><span>速さ m/s</span></div>
+        <div class="metric"><b id="omega">0.00</b><span>回転 rad/s</span></div>
+        <div class="metric"><b id="upness">0.00</b><span>上向き</span></div>
+      </div>
+      <p id="status" class="status">準備中…</p>
+      <div class="actions">
+        <button id="sound30" disabled>30秒後の音を確認</button>
+        <button id="record">4秒動画を録画</button>
+        <button id="saveVideo" class="secondary" disabled>動画を保存</button>
+        <button id="saveCard" class="secondary">カードPNGを保存</button>
+      </div>
+      <video id="preview" playsinline controls></video>
+    </section>
+  </main>
+
+  <script type="module">
+    import { requestMotion, startMotion, createMotionTracker } from './sensors.js?v=1';
+    import { unlock, load, play } from './audio.js?v=1';
+    import { isRecordingSupported, startRecording, stopRecording, shareBlob, renderResultCard } from './capture.js?v=1';
+    import { screens, shake, toast, showVersion } from './ui.js?v=1';
+
+    const VERSION = 'p0-1.1';
+    const view = screens(['intro', 'lab']);
+    const tracker = createMotionTracker();
+    const $ = (id) => document.getElementById(id);
+    const canvas = $('stage');
+    const context = canvas.getContext('2d');
+    let motionReady = false;
+    let audioReady = false;
+    let lastVideo = null;
+    let lastVideoUrl = null;
+    let ripple = 0;
+
+    showVersion(VERSION);
+    view.show('intro');
+
+    $('start').addEventListener('click', async () => {
+      $('start').disabled = true;
+      $('start').textContent = '準備しています…';
+
+      // Both permission-sensitive operations begin in this same tap handler.
+      const motionPromise = requestMotion();
+      const audioPromise = unlock();
+      const [motionResult, audioResult] = await Promise.allSettled([motionPromise, audioPromise]);
+      motionReady = motionResult.status === 'fulfilled' && motionResult.value;
+      audioReady = audioResult.status === 'fulfilled';
+
+      if (audioReady) {
+        try {
+          await load('check', new URL('../sounds/check.wav?v=1', import.meta.url).href);
+          play('check', { gain: .7 });
+        } catch (error) {
+          audioReady = false;
+          console.error(error);
+        }
+      }
+
+      if (motionReady) startMotion((frame) => tracker.update(frame));
+      view.show('lab');
+      updateStatus();
+
+      setTimeout(() => {
+        $('sound30').disabled = !audioReady;
+        if (audioReady) {
+          play('check', { gain: .7 });
+          $('status').textContent = '✅ 30秒後も自動で音を鳴らしました。聞こえたら音声保持OKです。';
+          toast('30秒後の音を再生しました');
+        }
+      }, 30_000);
+    });
+
+    function updateStatus() {
+      const parts = [
+        motionReady ? '✅ モーション許可OK' : '⚠️ モーション未対応・未許可',
+        audioReady ? '✅ 音OK' : '⚠️ 音の準備に失敗',
+        isRecordingSupported() ? '✅ 録画対応' : '⚠️ 動画非対応（PNGは利用可）',
+      ];
+      $('status').textContent = parts.join('　');
+      $('record').disabled = !isRecordingSupported() || !audioReady;
+    }
+
+    tracker.onStroke((stroke) => {
+      ripple = Math.min(1, .25 + stroke.peakLin / 4);
+      shake(Math.min(1.6, .5 + stroke.peakLin / 4));
+      toast(`振りを検出：${stroke.peakLin.toFixed(2)} m/s`);
+    });
+
+    $('recalibrate').addEventListener('click', () => {
+      tracker.calibrate();
+      toast('0.5秒静止して再調整します');
+    });
+    $('sound30').addEventListener('click', () => play('check', { gain: .7 }));
+
+    $('record').addEventListener('click', async () => {
+      const button = $('record');
+      button.disabled = true;
+      button.textContent = '録画中 4…';
+      try {
+        startRecording(canvas);
+        play('check', { gain: .8 });
+        const timers = [
+          setTimeout(() => { button.textContent = '録画中 3…'; play('check', { rate: 1.08, gain: .8 }); }, 1000),
+          setTimeout(() => { button.textContent = '録画中 2…'; play('check', { rate: 1.16, gain: .8 }); }, 2000),
+          setTimeout(() => { button.textContent = '録画中 1…'; play('check', { rate: 1.24, gain: .8 }); }, 3000),
+        ];
+        await new Promise((resolve) => setTimeout(resolve, 4000));
+        timers.forEach(clearTimeout);
+        lastVideo = await stopRecording();
+        if (lastVideoUrl) URL.revokeObjectURL(lastVideoUrl);
+        lastVideoUrl = URL.createObjectURL(lastVideo);
+        $('preview').src = lastVideoUrl;
+        $('preview').classList.add('ready');
+        $('saveVideo').disabled = false;
+        $('status').textContent = '✅ 録画完了。下の動画を再生して、映像と4回の音を確認してください。';
+        toast('録画できました');
+      } catch (error) {
+        console.error(error);
+        $('status').textContent = `⚠️ 録画できませんでした：${error.message}`;
+      } finally {
+        button.disabled = false;
+        button.textContent = '4秒動画を録画';
+      }
+    });
+
+    $('saveVideo').addEventListener('click', async () => {
+      if (!lastVideo) return;
+      await shareBlob(lastVideo, '#釣れた 基盤録画テスト');
+    });
+
+    $('saveCard').addEventListener('click', async () => {
+      const blob = await renderResultCard((ctx, card) => {
+        const gradient = ctx.createLinearGradient(0, 0, 0, card.height);
+        gradient.addColorStop(0, '#0b6b8b');
+        gradient.addColorStop(.55, '#073553');
+        gradient.addColorStop(1, '#041522');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, card.width, card.height);
+        ctx.fillStyle = '#8be9ff22';
+        for (let i = 0; i < 8; i += 1) {
+          ctx.beginPath();
+          ctx.arc(140 + i * 145, 390 + Math.sin(i) * 60, 85 + i * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#91ecff';
+        ctx.font = '700 42px system-ui';
+        ctx.fillText('MOTION FISHING', card.width / 2, 155);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 116px system-ui';
+        ctx.fillText('釣れた！', card.width / 2, 300);
+        ctx.font = '900 210px system-ui';
+        ctx.fillText('🐟', card.width / 2, 630);
+        ctx.font = '800 54px system-ui';
+        ctx.fillText('基盤チェック成功', card.width / 2, 790);
+        ctx.fillStyle = '#c6e9f3';
+        ctx.font = '500 34px system-ui';
+        ctx.fillText(`最高速度 ${tracker.peakLin.toFixed(2)} m/s`, card.width / 2, 870);
+        ctx.fillStyle = '#ffffff18';
+        ctx.fillRect(110, 965, 860, 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 32px system-ui';
+        ctx.fillText('釣れた！ 体感フィッシング', card.width / 2, 1070);
+        ctx.fillStyle = '#9fc6d4';
+        ctx.font = '500 26px system-ui';
+        ctx.fillText(location.origin + location.pathname.replace(/\/lib\/demo\.html$/, '/'), card.width / 2, 1130);
+        ctx.font = '700 28px system-ui';
+        ctx.fillText('#釣れた', card.width / 2, 1235);
+      });
+      await shareBlob(blob, '釣れた！体感フィッシング #釣れた');
+    });
+
+    function draw(now) {
+      const t = now / 1000;
+      const width = canvas.width;
+      const height = canvas.height;
+      const sky = context.createLinearGradient(0, 0, 0, height);
+      sky.addColorStop(0, '#164f6e');
+      sky.addColorStop(.46, '#0b3049');
+      sky.addColorStop(1, '#061926');
+      context.fillStyle = sky;
+      context.fillRect(0, 0, width, height);
+      context.fillStyle = '#d9f7ff';
+      context.beginPath();
+      context.arc(560, 150, 52, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = '#92e8ff18';
+      for (let y = 430; y < height; y += 42) {
+        context.beginPath();
+        for (let x = 0; x <= width; x += 12) {
+          const wave = y + Math.sin(x / 65 + t * 2.2 + y / 90) * 8;
+          if (x === 0) context.moveTo(x, wave); else context.lineTo(x, wave);
+        }
+        context.lineWidth = 3;
+        context.strokeStyle = '#7ce6ff35';
+        context.stroke();
+      }
+      ripple *= .976;
+      context.beginPath();
+      context.arc(width / 2, 620, 40 + ripple * 250, 0, Math.PI * 2);
+      context.strokeStyle = `rgba(124,230,255,${.18 + ripple * .65})`;
+      context.lineWidth = 8;
+      context.stroke();
+      context.textAlign = 'center';
+      context.fillStyle = '#ffffff';
+      context.font = '900 64px system-ui';
+      context.fillText('釣れた！', width / 2, 105);
+      context.fillStyle = '#b8dae5';
+      context.font = '600 28px system-ui';
+      context.fillText('音付きアプリ内録画テスト', width / 2, 910);
+      $('peak').textContent = tracker.peakLin.toFixed(2);
+      $('omega').textContent = tracker.omega.toFixed(2);
+      $('upness').textContent = tracker.upness.toFixed(2);
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
