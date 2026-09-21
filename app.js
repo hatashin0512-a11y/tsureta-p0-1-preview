@@ -4,10 +4,11 @@ import { requestMotion, startMotion, createMotionTracker } from './lib/sensors.j
 import { unlock, load, play } from './lib/audio.js?v=1';
 import { screens, shake, toast, showVersion } from './lib/ui.js?v=2';
 import { listenForCasts } from './game/cast.js?v=2';
+import { P as HOOK_P, hookResult, randomBiteDelay } from './game/hook.js?v=1';
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-3.1';
+const VERSION = 'p0-4.0';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
@@ -23,6 +24,12 @@ let castArmed = false;
 let castInFlight = false;
 let splashTimer = 0;
 let previousDistance = null;
+let biteTimer = 0;
+let hookTimer = 0;
+let retryTimer = 0;
+let hookWindowOpen = false;
+let hookFinished = false;
+let hookFrame = 0;
 
 showVersion(VERSION);
 show('title');
@@ -43,6 +50,13 @@ document.addEventListener('click', (event) => {
 
   if (button.id === 'debug-toggle') {
     const debug = document.getElementById('cast-debug');
+    debug.hidden = !debug.hidden;
+    button.setAttribute('aria-expanded', String(!debug.hidden));
+    return;
+  }
+
+  if (button.id === 'bite-debug-toggle') {
+    const debug = document.getElementById('bite-debug');
     debug.hidden = !debug.hidden;
     button.setAttribute('aria-expanded', String(!debug.hidden));
     return;
@@ -80,6 +94,7 @@ function selectChoice(selector, selected) {
 
 /** @param {ScreenId} id */
 function show(id) {
+  if (state.screen === 'bite' && id !== 'bite') clearBiteTimers();
   state.screen = id;
   view.show(id);
   const index = FLOW.indexOf(id);
@@ -91,6 +106,7 @@ function show(id) {
   window.scrollTo({ top: 0, behavior: 'auto' });
   updateSelections();
   if (id === 'cast') prepareCast();
+  if (id === 'bite') prepareBite();
 }
 
 function updateSelections() {
@@ -120,6 +136,7 @@ async function initializeExperience(button) {
       await Promise.all([
         load('cast-whoosh', new URL('./sounds/cast_whoosh.wav?v=1', import.meta.url).href),
         load('splash', new URL('./sounds/splash.wav?v=1', import.meta.url).href),
+        load('bite', new URL('./sounds/bite.wav?v=1', import.meta.url).href),
       ]);
     } catch (error) {
       audioReady = false;
@@ -206,3 +223,94 @@ listenForCasts(tracker, (result) => {
     document.getElementById('cast-recalibrate').textContent = 'もう一度投げる';
   }, delayMs);
 });
+
+function clearBiteTimers() {
+  clearTimeout(biteTimer);
+  clearTimeout(hookTimer);
+  clearTimeout(retryTimer);
+  cancelAnimationFrame(hookFrame);
+  hookWindowOpen = false;
+}
+
+function prepareBite() {
+  clearBiteTimers();
+  hookFinished = false;
+  tracker.calibrate();
+  const scene = document.getElementById('bite-scene');
+  scene.className = 'scene bite-stage bite-waiting';
+  document.getElementById('bite-heading').textContent = 'ウキを見て！';
+  document.getElementById('bite-icon').textContent = '🔴';
+  document.getElementById('bite-prompt').textContent = '静かに構えて待つ';
+  document.getElementById('bite-subprompt').textContent = '「アタリ！」が出たら、1.2秒以内にスマホを上へクイッ！';
+  document.getElementById('bite-result').textContent = 'まだ動かさず、ウキに集中してください。';
+  document.getElementById('bite-next').hidden = true;
+  biteTimer = setTimeout(triggerBite, randomBiteDelay());
+}
+
+function triggerBite() {
+  if (state.screen !== 'bite' || hookFinished) return;
+  hookWindowOpen = true;
+  const scene = document.getElementById('bite-scene');
+  scene.className = 'scene bite-stage bite-now';
+  document.getElementById('bite-heading').textContent = 'アタリ！！';
+  document.getElementById('bite-icon').textContent = '⚡';
+  document.getElementById('bite-prompt').textContent = '今！上へクイッ！';
+  document.getElementById('bite-subprompt').textContent = 'スマホをしっかり握り、手首だけを上へ強く動かす';
+  document.getElementById('bite-result').textContent = '判定時間は1.2秒！';
+  if (audioReady) play('bite', { gain: 1 });
+  shake(1.8);
+  hookFrame = requestAnimationFrame(checkHookMotion);
+  hookTimer = setTimeout(failHook, HOOK_P.hookWindowMs);
+}
+
+function checkHookMotion() {
+  if (state.screen !== 'bite' || !hookWindowOpen || hookFinished) return;
+  const result = hookResult({
+    peakLin: tracker.peakLin,
+    omega: tracker.omega,
+    upness: tracker.upness,
+    durMs: 0,
+  });
+  document.getElementById('bite-debug-peak').textContent = result.peakLin.toFixed(2);
+  document.getElementById('bite-debug-upness').textContent = result.upness.toFixed(2);
+  if (result.ok) {
+    finishHook(true);
+    return;
+  }
+  hookFrame = requestAnimationFrame(checkHookMotion);
+}
+
+function failHook() {
+  if (state.screen !== 'bite' || hookFinished) return;
+  finishHook(false);
+}
+
+/** @param {boolean} success */
+function finishHook(success) {
+  hookFinished = true;
+  hookWindowOpen = false;
+  clearTimeout(hookTimer);
+  cancelAnimationFrame(hookFrame);
+  const scene = document.getElementById('bite-scene');
+  if (success) {
+    scene.className = 'scene bite-stage bite-success';
+    document.getElementById('bite-heading').textContent = 'アワセ成功！';
+    document.getElementById('bite-icon').textContent = '🐟';
+    document.getElementById('bite-prompt').textContent = 'かかった！！';
+    document.getElementById('bite-subprompt').textContent = '魚がルアーをくわえました';
+    document.getElementById('bite-result').textContent = '成功！次はリールを巻いて魚と勝負です。';
+    document.getElementById('bite-next').hidden = false;
+    shake(.7);
+    return;
+  }
+
+  scene.className = 'scene bite-stage bite-fail';
+  document.getElementById('bite-heading').textContent = 'バレた…惜しい！';
+  document.getElementById('bite-icon').textContent = '💨';
+  document.getElementById('bite-prompt').textContent = '魚が逃げた！';
+  document.getElementById('bite-subprompt').textContent = '次は「アタリ！」が出てから、すぐ上へクイッ';
+  document.getElementById('bite-result').textContent = '2秒後に、もう一度投げられます。';
+  retryTimer = setTimeout(() => {
+    if (state.screen === 'bite') show('cast');
+  }, 2000);
+}

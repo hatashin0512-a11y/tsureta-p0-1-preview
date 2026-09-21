@@ -91,6 +91,20 @@
     .debug-toggle { width: 100%; min-height: 40px; margin-top: 9px; font-size: 12px; }
     .cast-debug { margin-top: 8px; border-radius: 13px; padding: 10px 12px; color: #9ed6e5; background: #020c13c7; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.7; }
     .cast-debug b { color: #fff; }
+    .bite-stage { min-height: 390px; transition: background .18s ease, box-shadow .18s ease; }
+    .bite-stage::before { content: ""; position: absolute; z-index: 1; left: 50%; top: 45%; width: 3px; height: 95px; background: #eefcffaa; transform: translate(-50%, -100%); transform-origin: bottom; }
+    .bite-stage .scene-content { width: 100%; }
+    .bite-waiting .scene-icon { animation: bobber 1.7s ease-in-out infinite; }
+    @keyframes bobber { 50% { transform: translateY(17px) scale(.94); } }
+    .bite-now { background: radial-gradient(circle, #ffed79 0, #ff694d 38%, #720f25 100%); box-shadow: inset 0 0 90px #ffed6b, 0 0 45px #ff524caa; animation: bite-impact .16s ease-in-out 5 alternate; }
+    .bite-now::after { opacity: .8; }
+    .bite-now .scene-icon { font-size: 108px; filter: drop-shadow(0 0 25px #fff); }
+    @keyframes bite-impact { to { transform: translateX(5px) scale(1.01); } }
+    .bite-success { background: radial-gradient(circle at 50% 48%, #7df4be, #148a73 48%, #073d4d); }
+    .bite-success .scene-icon { animation: hook-jump .55s ease-out both; }
+    @keyframes hook-jump { 45% { transform: translateY(-75px) rotate(-8deg) scale(1.25); } }
+    .bite-fail { background: linear-gradient(#617786, #243b4b 52%, #112b3a); filter: saturate(.5); }
+    .bite-result { min-height: 48px; margin: 12px 0 0; border-radius: 14px; padding: 12px; color: #dcf7ff; background: #ffffff0b; border: 1px solid #ffffff1b; text-align: center; font-size: 14px; font-weight: 800; line-height: 1.55; }
     .meter { height: 18px; overflow: hidden; border: 3px solid #e8fbff; border-radius: 999px; background: #102633; }
     .meter > span { display: block; width: 62%; height: 100%; background: linear-gradient(90deg, #61e2aa 0 55%, #ffd15e 72%, #ff5d69 100%); }
     .meter-labels { display: flex; justify-content: space-between; margin-top: 6px; color: #b9d7e1; font-size: 11px; }
@@ -174,9 +188,12 @@
     </section>
 
     <section id="bite" class="screen" hidden>
-      <p class="eyebrow">S-06 WAIT &amp; BITE</p><h2>ウキを見て！</h2>
-      <div class="scene"><div class="scene-content"><span class="scene-icon float flash">🔴</span><p class="prompt">アタリ！</p><p class="subprompt">ググッ…！ 手首を上へ</p></div></div>
-      <div class="footer-actions"><button data-go="fight">アワセ成功として進む</button></div>
+      <p class="eyebrow">S-06 WAIT &amp; BITE</p><h2 id="bite-heading">ウキを見て！</h2>
+      <div id="bite-scene" class="scene bite-stage bite-waiting"><div class="scene-content"><span id="bite-icon" class="scene-icon">🔴</span><p id="bite-prompt" class="prompt">静かに構えて待つ</p><p id="bite-subprompt" class="subprompt">「アタリ！」が出たら、1.2秒以内にスマホを上へクイッ！</p></div></div>
+      <p id="bite-result" class="bite-result">まだ動かさず、ウキに集中してください。</p>
+      <button id="bite-debug-toggle" class="secondary debug-toggle" aria-expanded="false">開発者向け数値を表示</button>
+      <div id="bite-debug" class="cast-debug" hidden>peakLin: <b id="bite-debug-peak">0.00</b> m/s<br>upness: <b id="bite-debug-upness">0.00</b><br>成功条件: peakLin &gt; 1.20 / upness &gt; 0.35</div>
+      <div class="footer-actions"><button id="bite-next" data-go="fight" hidden>アワセ成功！魚とファイトへ</button></div>
     </section>
 
     <section id="fight" class="screen" hidden>
@@ -199,6 +216,6 @@
       <div class="footer-actions"><button data-go="point">もう一投</button><button class="secondary" data-go="title">タイトルへ戻る</button></div>
     </section>
   </main>
-  <script type="module" src="./app.js?v=3"></script>
+  <script type="module" src="./app.js?v=4"></script>
 </body>
 </html>
