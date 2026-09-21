@@ -24,7 +24,9 @@ const RUSH_TIMES = [2400, 6200, 10200];
 /** @param {{random?:()=>number}} [options] */
 export function createFight(options = {}) {
   const random = options.random ?? Math.random;
-  const rushCount = 1 + Math.floor(clamp01(random()) * 2.999999);
+  const rushCountMax = Math.max(1, Math.min(3, options.rushCountMax ?? 3));
+  const tensionMultiplier = Math.max(0, options.tensionMultiplier ?? 1);
+  const rushCount = 1 + Math.floor(clamp01(random()) * (rushCountMax - .000001));
   const rushTimes = RUSH_TIMES.slice(0, rushCount);
   let startedAt = 0;
   let lastAt = 0;
@@ -83,7 +85,7 @@ export function createFight(options = {}) {
       remaining = clamp01(remaining - turns / P.requiredTurns);
       if (phase === 'rush') {
         tension += reelSpeed > .06
-          ? dt * P.tensionRisePerSec * Math.max(.35, reelSpeed)
+          ? dt * P.tensionRisePerSec * tensionMultiplier * Math.max(.35, reelSpeed)
           : -dt * P.tensionReleasePerSec;
       } else {
         tension -= dt * (reelSpeed > .06 ? P.tensionCoastPerSec : P.tensionReleasePerSec);

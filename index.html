@@ -156,9 +156,32 @@
     .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 13px; }
     .action-grid button { min-height: 62px; padding: 9px 4px; font-size: 12px; }
     .selected-line { margin: 0 0 12px; color: #aee8f5; font-size: 13px; }
+    .tutorial-tip { margin: 0 0 11px; border-radius: 15px; padding: 11px 13px; color: #08291f; background: linear-gradient(135deg, #b8ffd7, #72edb0); font-size: 13px; font-weight: 900; line-height: 1.5; box-shadow: 0 8px 24px #001b1570; }
+    .safety-overlay { position: fixed; z-index: 10000; inset: 0; display: grid; place-items: center; padding: calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom)); background: #02111bea; backdrop-filter: blur(12px); }
+    .safety-overlay[hidden] { display: none; }
+    .safety-card { width: min(100%, 500px); max-height: 94svh; overflow: auto; border: 1px solid #8befff55; border-radius: 28px; padding: 22px; background: linear-gradient(160deg, #0d4059, #061e31); box-shadow: 0 25px 80px #000b; }
+    .safety-card h2 { margin-bottom: 7px; }
+    .safety-list { display: grid; gap: 9px; margin: 16px 0; }
+    .safety-item { display: grid; grid-template-columns: 46px 1fr; align-items: center; gap: 10px; border-radius: 16px; padding: 12px; background: #ffffff0c; }
+    .safety-item .icon { font-size: 30px; text-align: center; }
+    .safety-item b, .safety-item small { display: block; }
+    .safety-item small { margin-top: 3px; color: #bcdbe4; line-height: 1.45; }
+    .safety-card button { width: 100%; }
   </style>
 </head>
 <body>
+  <div id="safety-overlay" class="safety-overlay" role="dialog" aria-modal="true" aria-labelledby="safety-title" hidden>
+    <div class="safety-card">
+      <p class="eyebrow">FIRST PLAY SAFETY</p><h2 id="safety-title">安全を確認して遊ぼう</h2>
+      <p class="lead">スマホを釣り竿にする前に、3つだけ確認してください。</p>
+      <div class="safety-list">
+        <div class="safety-item"><span class="icon">📱</span><span><b>端末をしっかり握る</b><small>大振りは不要。胸の前で手首だけを使います。</small></span></div>
+        <div class="safety-item"><span class="icon">🛟</span><span><b>ストラップを推奨</b><small>装着できる場合は落下防止ストラップを使ってください。</small></span></div>
+        <div class="safety-item"><span class="icon">↔️</span><span><b>周囲に人や物がない</b><small>座ったまま遊べます。顔や物から離して構えます。</small></span></div>
+      </div>
+      <button id="safety-start">確認した！ゲームを始める</button>
+    </div>
+  </div>
   <main class="app">
     <div class="flow" aria-label="画面進行度"><div class="flow-track"><div id="flow-progress"></div></div><span id="flow-label">1 / 9</span></div>
 
@@ -204,6 +227,7 @@
 
     <section id="cast" class="screen" hidden>
       <p class="eyebrow">S-05 CAST</p><h2>キャスト！</h2><p class="selected-line"><b data-selected-point>夕凪堤防</b></p>
+      <p id="cast-tutorial" class="tutorial-tip" hidden>① 投げる：胸の前で持ち、手首だけで前へ「シュッ」！</p>
       <div id="cast-scene" class="scene cast-stage">
         <div class="cast-skyline"></div><div class="cast-rod"></div><span class="cast-lure">◆</span><div class="splash-ring"></div>
         <div class="cast-instruction">周囲を確認して、端末をしっかり握ってください</div>
@@ -218,6 +242,7 @@
 
     <section id="bite" class="screen" hidden>
       <p class="eyebrow">S-06 WAIT &amp; BITE</p><h2 id="bite-heading">ウキを見て！</h2>
+      <p id="bite-tutorial" class="tutorial-tip" hidden>② アワセ：アタリが出たら、画面上側を自分へ素早く起こす！</p>
       <div id="bite-scene" class="scene bite-stage bite-waiting"><div class="scene-content"><span id="bite-icon" class="scene-icon">🔴</span><p id="bite-prompt" class="prompt">静かに構えて待つ</p><p id="bite-subprompt" class="subprompt">「アタリ！」が出たら、手首でスマホの先を自分側へクイッ！</p></div></div>
       <div class="hook-guide"><span class="phone">📱</span><span><b>手首で竿を立てる動き</b><small>胸の前で平らに持ち、スマホの先を自分側へ小さく起こします。</small></span></div>
       <p id="bite-result" class="bite-result">胸の前で平らに構え、まだ動かさずウキに集中。</p>
@@ -228,6 +253,7 @@
 
     <section id="fight" class="screen" hidden>
       <p class="eyebrow">S-07 FIGHT</p><h2 id="fight-heading">魚とファイト！</h2>
+      <p id="fight-tutorial" class="tutorial-tip" hidden>③ 巻く：青はぐるぐる、赤く光ったら指を離す！</p>
       <div id="fight-scene" class="panel fight-panel">
         <div class="fight-status"><span>魚との距離 <b id="fish-distance">100%</b></span><span>残り <b id="fight-timer">20.0秒</b></span></div>
         <div class="distance-meter" aria-label="魚を寄せた量"><span id="distance-fill"></span></div>
@@ -253,6 +279,6 @@
       <div class="footer-actions"><button data-go="point">もう一投</button><button class="secondary" data-go="title">タイトルへ戻る</button></div>
     </section>
   </main>
-  <script type="module" src="./app.js?v=8"></script>
+  <script type="module" src="./app.js?v=9"></script>
 </body>
 </html>

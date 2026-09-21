@@ -3,17 +3,18 @@
 import { requestMotion, startMotion, createMotionTracker } from './lib/sensors.js?v=2';
 import { unlock, load, play, loopEngine } from './lib/audio.js?v=1';
 import { screens, shake, toast, showVersion } from './lib/ui.js?v=2';
-import { listenForCasts } from './game/cast.js?v=2';
+import { P as CAST_P, castResult, listenForCasts } from './game/cast.js?v=2';
 import { P as HOOK_P, hookResult, randomBiteDelay } from './game/hook.js?v=2';
 import { angleDelta, createFight } from './game/fight.js?v=1';
 import { drawCatch } from './game/lottery.js?v=1';
-import { recordCatch } from './game/dex.js?v=1';
+import { readDex, recordCatch } from './game/dex.js?v=1';
 import { renderCatchCard } from './game/card.js?v=1';
 import { shareBlob } from './lib/capture.js?v=1';
+import { boostForPlayCount, completePlay, getPlayCount, markSafetySeen, safetySeen } from './game/boost.js?v=1';
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-6.0';
+const VERSION = 'p0-7.0';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
@@ -30,6 +31,9 @@ const fishDataPromise = fetch(new URL('./data/fish.json?v=1', import.meta.url), 
     return response.json();
   });
 const tracker = createMotionTracker();
+const existingCatchCount = readDex().reduce((sum, entry) => sum + entry.game.count, 0);
+getPlayCount(localStorage, existingCatchCount);
+let activeBoost = boostForPlayCount(getPlayCount());
 let motionReady = false;
 let audioReady = false;
 let castArmed = false;
@@ -61,6 +65,17 @@ document.addEventListener('click', (event) => {
   if (!button) return;
 
   if (button.id === 'start-button') {
+    if (!safetySeen()) {
+      document.getElementById('safety-overlay').hidden = false;
+      return;
+    }
+    initializeExperience(button);
+    return;
+  }
+
+  if (button.id === 'safety-start') {
+    markSafetySeen();
+    document.getElementById('safety-overlay').hidden = true;
     initializeExperience(button);
     return;
   }
@@ -199,6 +214,8 @@ function prepareCast() {
   castInFlight = false;
   state.catchData = null;
   cardBlob = null;
+  activeBoost = boostForPlayCount(getPlayCount());
+  document.getElementById('cast-tutorial').hidden = activeBoost.level !== 'full';
   tracker.calibrate();
   const scene = document.getElementById('cast-scene');
   scene.classList.remove('cast-fired', 'cast-splash');
@@ -217,7 +234,13 @@ function prepareCast() {
   }, 650);
 }
 
-listenForCasts(tracker, (result) => {
+listenForCasts(tracker, (rawResult) => {
+  const castMin = activeBoost.level === 'full' ? CAST_P.castMin * .5
+    : activeBoost.level === 'half' ? CAST_P.castMin * .75 : CAST_P.castMin;
+  const result = {
+    ...rawResult,
+    ...castResult(rawResult.peakLin, { ...CAST_P, castMin }),
+  };
   if (state.screen !== 'cast' || !castArmed || castInFlight) return;
   document.getElementById('debug-peak').textContent = result.peakLin.toFixed(2);
   document.getElementById('debug-omega').textContent = result.omega.toFixed(2);
@@ -289,7 +312,8 @@ function prepareBite() {
   document.getElementById('bite-subprompt').textContent = '「アタリ！」が出たら、手首でスマホの先を自分側へクイッ！';
   document.getElementById('bite-result').textContent = '胸の前で平らに構え、まだ動かさずウキに集中。';
   document.getElementById('bite-next').hidden = true;
-  biteTimer = setTimeout(triggerBite, randomBiteDelay());
+  document.getElementById('bite-tutorial').hidden = activeBoost.level !== 'full';
+  biteTimer = setTimeout(triggerBite, randomBiteDelay({ ...HOOK_P, biteMaxMs: activeBoost.biteMaxMs }));
 }
 
 function triggerBite() {
@@ -306,7 +330,7 @@ function triggerBite() {
   if (audioReady) play('bite', { gain: 1 });
   shake(1.8);
   hookFrame = requestAnimationFrame(checkHookMotion);
-  hookTimer = setTimeout(failHook, HOOK_P.hookWindowMs);
+  hookTimer = setTimeout(() => activeBoost.autoHook ? finishHook(true) : failHook(), activeBoost.hookWindowMs);
 }
 
 function checkHookMotion() {
@@ -317,6 +341,11 @@ function checkHookMotion() {
     pitchOmega: tracker.peakPitchOmega,
     upness: tracker.upness,
     durMs: 0,
+  }, {
+    ...HOOK_P,
+    hookMinPeak: HOOK_P.hookMinPeak * activeBoost.hookScale,
+    hookMinUpness: HOOK_P.hookMinUpness * activeBoost.hookScale,
+    hookMinPitchOmega: HOOK_P.hookMinPitchOmega * activeBoost.hookScale,
   });
   document.getElementById('bite-debug-peak').textContent = result.peakLin.toFixed(2);
   document.getElementById('bite-debug-upness').textContent = result.upness.toFixed(2);
@@ -396,7 +425,10 @@ function pointerAngle(event, element) {
 
 function prepareFight() {
   clearFight();
-  fight = createFight();
+  fight = createFight({
+    rushCountMax: activeBoost.rushCountMax,
+    tensionMultiplier: activeBoost.tensionMultiplier,
+  });
   fightLastPhase = 'calm';
   reelVisualTurns = 0;
   reel.style.setProperty('--reel-angle', '0deg');
@@ -408,6 +440,7 @@ function prepareFight() {
   document.getElementById('fight-result').hidden = true;
   document.getElementById('fish-distance').textContent = '100%';
   document.getElementById('fight-timer').textContent = '20.0秒';
+  document.getElementById('fight-tutorial').hidden = activeBoost.level !== 'full';
   fight.start();
   if (audioReady) {
     reelSound = loopEngine('reel-loop');
@@ -508,8 +541,11 @@ async function prepareResult() {
   document.getElementById('result-card-button').disabled = true;
   try {
     const fish = await fishDataPromise;
-    const catchResult = drawCatch(fish, { pointId: 'pier', castPower: state.castPower });
+    const catchResult = drawCatch(fish, {
+      pointId: 'pier', castPower: state.castPower, boost: activeBoost.lotteryBoost,
+    });
     const dex = recordCatch(catchResult.species, catchResult.cm);
+    completePlay();
     const badge = catchResult.monster ? 'モンスター級！'
       : dex.first ? '初ゲット！'
         : dex.best ? '自己ベスト！' : 'ナイスキャッチ！';

@@ -4,25 +4,27 @@ const RARITIES = ['N', 'R', 'SR', 'UR'];
  * Draws a catch from data only. Adding a valid fish row automatically makes
  * it eligible without changing this module.
  * @param {Array<any>} fish
- * @param {{pointId:string,castPower?:number,random?:()=>number}} options
+ * @param {{pointId:string,castPower?:number,boost?:'full'|'half'|'none',random?:()=>number}} options
  */
 export function drawCatch(fish, options) {
   const random = options.random ?? Math.random;
   const power = Math.max(0, Math.min(1, options.castPower ?? 0));
+  const boost = options.boost ?? 'none';
   const eligible = fish.filter((item) => item.habitat?.includes(options.pointId));
   if (!eligible.length) throw new Error(`No fish for point: ${options.pointId}`);
 
   const urWeight = .01 + power * .01;
   const srWeight = .07 + power * .04;
   const rWeight = .27 + power * .03;
-  const roll = random();
+  const roll = boost === 'full' ? Math.min(.34, random() * .34)
+    : boost === 'half' ? Math.min(.55, random() * .55) : random();
   const rarity = roll < urWeight ? 'UR'
     : roll < urWeight + srWeight ? 'SR'
       : roll < urWeight + srWeight + rWeight ? 'R' : 'N';
   const sameRarity = eligible.filter((item) => item.rarity === rarity);
   const pool = sameRarity.length ? sameRarity : eligible;
   const species = pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
-  const size = drawSize(species.size_cm, random);
+  const size = drawSize(species.size_cm, random, boost);
   const topFive = size >= species.size_cm.max - (species.size_cm.max - species.size_cm.min) * .05;
   return {
     species,
@@ -32,7 +34,15 @@ export function drawCatch(fish, options) {
   };
 }
 
-function drawSize(range, random) {
+function drawSize(range, random, boost) {
+  if (boost === 'full') {
+    const floor = range.min + (range.max - range.min) * .7;
+    return floor + (range.max - floor) * random() ** 1.7;
+  }
+  if (boost === 'half') {
+    const floor = range.min + (range.max - range.min) * .5;
+    return floor + (range.max - floor) * random() ** 1.9;
+  }
   const upper = random() > .82;
   const start = upper ? range.typical : range.min;
   const end = upper ? range.max : range.typical;
