@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#041827">
+  <title>釣れた！感度テスト</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100svh;color:#f7fcff;background:radial-gradient(circle at 50% 0,#16738d,#082c43 45%,#03131f);font-family:system-ui,-apple-system,"Hiragino Sans",sans-serif}.app{width:min(100%,540px);min-height:100svh;margin:auto;padding:calc(24px + env(safe-area-inset-top)) 18px calc(26px + env(safe-area-inset-bottom));display:grid;align-content:center;gap:16px;text-align:center}.eyebrow{margin:0;color:#79e8ff;font-size:12px;font-weight:900;letter-spacing:.15em}h1{margin:0;font-size:38px}p{margin:0;color:#c8e1e9;line-height:1.7}.panel{border:1px solid #9cecff33;border-radius:26px;padding:22px;background:#071f31d9;box-shadow:0 22px 60px #0008}.icon{font-size:76px}.instruction{min-height:84px;margin:10px 0 0;color:#fff;font-size:24px;font-weight:950;line-height:1.35}.status{min-height:48px;margin-top:10px;border-radius:14px;padding:12px;color:#06291e;background:#83efb7;font-weight:900}.progress{height:9px;overflow:hidden;border-radius:99px;background:#ffffff17}.progress span{display:block;width:0;height:100%;background:linear-gradient(90deg,#72e6ff,#76efb1);transition:width .3s}button{width:100%;min-height:56px;border:0;border-radius:17px;padding:12px;color:#052638;background:linear-gradient(135deg,#a6f4ff,#67dcf8);font:900 16px inherit;box-shadow:0 12px 30px #00111f88}button.secondary{color:#f7fcff;background:#ffffff10;border:1px solid #ffffff28;box-shadow:none}.safe{font-size:12px}.result{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:10px;border-radius:14px;padding:12px;color:#9ed9e8;background:#020d15;text-align:left;font:11px ui-monospace,monospace}.buttons{display:grid;gap:9px;margin-top:12px}[hidden]{display:none!important}
+  </style>
+</head>
+<body><main class="app">
+  <p class="eyebrow">DEVICE CALIBRATION • P0-8</p><h1>約1分の感度テスト</h1>
+  <p id="intro">画面の指示に合わせて、6種類の動きを2回ずつ行います。周囲を確認し、スマホをしっかり握ってください。</p>
+  <div class="progress"><span id="progress"></span></div>
+  <section class="panel"><div id="icon" class="icon">📱</div><p id="instruction" class="instruction">準備ができたら開始</p><div id="status" class="status">名前・位置情報は取得しません</div></section>
+  <button id="start">安全を確認して測定開始</button>
+  <section id="done" hidden><h2>測定完了！</h2><p>「結果をコピー」を押し、この文章を開発担当者へ送ってください。</p><div class="buttons"><button id="copy">結果をコピー</button><button id="share" class="secondary">結果を共有</button></div><div id="result" class="result"></div></section>
+  <p class="safe">大きく振る必要はありません。顔・人・物から離し、座ったまま行えます。</p>
+</main><script type="module" src="./calibrate.js?v=1"></script></body></html>
