@@ -9,7 +9,7 @@ import { angleDelta, createFight } from './game/fight.js?v=1';
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-5.0';
+const VERSION = 'p0-5.1';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
@@ -254,8 +254,8 @@ function prepareBite() {
   document.getElementById('bite-heading').textContent = 'ウキを見て！';
   document.getElementById('bite-icon').textContent = '🔴';
   document.getElementById('bite-prompt').textContent = '静かに構えて待つ';
-  document.getElementById('bite-subprompt').textContent = '「アタリ！」が出たら、1.2秒以内にスマホを上へクイッ！';
-  document.getElementById('bite-result').textContent = 'まだ動かさず、ウキに集中してください。';
+  document.getElementById('bite-subprompt').textContent = '「アタリ！」が出たら、手首でスマホの先を自分側へクイッ！';
+  document.getElementById('bite-result').textContent = '胸の前で平らに構え、まだ動かさずウキに集中。';
   document.getElementById('bite-next').hidden = true;
   biteTimer = setTimeout(triggerBite, randomBiteDelay());
 }
@@ -267,8 +267,8 @@ function triggerBite() {
   scene.className = 'scene bite-stage bite-now';
   document.getElementById('bite-heading').textContent = 'アタリ！！';
   document.getElementById('bite-icon').textContent = '⚡';
-  document.getElementById('bite-prompt').textContent = '今！上へクイッ！';
-  document.getElementById('bite-subprompt').textContent = 'スマホをしっかり握り、手首だけを上へ強く動かす';
+  document.getElementById('bite-prompt').textContent = '今！竿を立てる！';
+  document.getElementById('bite-subprompt').textContent = 'スマホの先を、手首で自分側へクイッと起こす';
   document.getElementById('bite-result').textContent = '判定時間は1.2秒！';
   if (audioReady) play('bite', { gain: 1 });
   shake(1.8);
@@ -321,7 +321,7 @@ function finishHook(success) {
   document.getElementById('bite-heading').textContent = 'バレた…惜しい！';
   document.getElementById('bite-icon').textContent = '💨';
   document.getElementById('bite-prompt').textContent = '魚が逃げた！';
-  document.getElementById('bite-subprompt').textContent = '次は「アタリ！」が出てから、すぐ上へクイッ';
+  document.getElementById('bite-subprompt').textContent = '次は「アタリ！」が出てから、手首で竿を立てる';
   document.getElementById('bite-result').textContent = '2秒後に、もう一度投げられます。';
   retryTimer = setTimeout(() => {
     if (state.screen === 'bite') show('cast');

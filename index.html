@@ -105,6 +105,11 @@
     @keyframes hook-jump { 45% { transform: translateY(-75px) rotate(-8deg) scale(1.25); } }
     .bite-fail { background: linear-gradient(#617786, #243b4b 52%, #112b3a); filter: saturate(.5); }
     .bite-result { min-height: 48px; margin: 12px 0 0; border-radius: 14px; padding: 12px; color: #dcf7ff; background: #ffffff0b; border: 1px solid #ffffff1b; text-align: center; font-size: 14px; font-weight: 800; line-height: 1.55; }
+    .hook-guide { display: grid; grid-template-columns: 54px 1fr; align-items: center; gap: 11px; margin: 10px 0 0; border-radius: 14px; padding: 10px 12px; background: #70e5ff12; border: 1px solid #70e5ff35; }
+    .hook-guide .phone { display: block; font-size: 35px; text-align: center; animation: hook-demo 1.8s ease-in-out infinite; transform-origin: bottom center; }
+    @keyframes hook-demo { 0%, 30% { transform: rotate(72deg); } 55%, 80% { transform: rotate(15deg); } 100% { transform: rotate(72deg); } }
+    .hook-guide b, .hook-guide small { display: block; }
+    .hook-guide small { margin-top: 3px; color: #bcdce5; line-height: 1.45; }
     .meter { height: 18px; overflow: hidden; border: 3px solid #e8fbff; border-radius: 999px; background: #102633; }
     .meter > span { display: block; width: 28%; height: 100%; background: linear-gradient(90deg, #61e2aa 0 55%, #ffd15e 72%, #ff5d69 100%); transition: width .08s linear; }
     .meter-labels { display: flex; justify-content: space-between; margin-top: 6px; color: #b9d7e1; font-size: 11px; }
@@ -206,8 +211,9 @@
 
     <section id="bite" class="screen" hidden>
       <p class="eyebrow">S-06 WAIT &amp; BITE</p><h2 id="bite-heading">ウキを見て！</h2>
-      <div id="bite-scene" class="scene bite-stage bite-waiting"><div class="scene-content"><span id="bite-icon" class="scene-icon">🔴</span><p id="bite-prompt" class="prompt">静かに構えて待つ</p><p id="bite-subprompt" class="subprompt">「アタリ！」が出たら、1.2秒以内にスマホを上へクイッ！</p></div></div>
-      <p id="bite-result" class="bite-result">まだ動かさず、ウキに集中してください。</p>
+      <div id="bite-scene" class="scene bite-stage bite-waiting"><div class="scene-content"><span id="bite-icon" class="scene-icon">🔴</span><p id="bite-prompt" class="prompt">静かに構えて待つ</p><p id="bite-subprompt" class="subprompt">「アタリ！」が出たら、手首でスマホの先を自分側へクイッ！</p></div></div>
+      <div class="hook-guide"><span class="phone">📱</span><span><b>手首で竿を立てる動き</b><small>胸の前で平らに持ち、スマホの先を自分側へ小さく起こします。</small></span></div>
+      <p id="bite-result" class="bite-result">胸の前で平らに構え、まだ動かさずウキに集中。</p>
       <button id="bite-debug-toggle" class="secondary debug-toggle" aria-expanded="false">開発者向け数値を表示</button>
       <div id="bite-debug" class="cast-debug" hidden>peakLin: <b id="bite-debug-peak">0.00</b> m/s<br>upness: <b id="bite-debug-upness">0.00</b><br>成功条件: peakLin &gt; 1.20 / upness &gt; 0.35</div>
       <div class="footer-actions"><button id="bite-next" data-go="fight" hidden>アワセ成功！魚とファイトへ</button></div>
@@ -240,6 +246,6 @@
       <div class="footer-actions"><button data-go="point">もう一投</button><button class="secondary" data-go="title">タイトルへ戻る</button></div>
     </section>
   </main>
-  <script type="module" src="./app.js?v=5"></script>
+  <script type="module" src="./app.js?v=6"></script>
 </body>
 </html>
