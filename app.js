@@ -1,14 +1,15 @@
 // @ts-check
 
 import { requestMotion, startMotion, createMotionTracker } from './lib/sensors.js?v=1';
-import { unlock, load, play } from './lib/audio.js?v=1';
+import { unlock, load, play, loopEngine } from './lib/audio.js?v=1';
 import { screens, shake, toast, showVersion } from './lib/ui.js?v=2';
 import { listenForCasts } from './game/cast.js?v=2';
 import { P as HOOK_P, hookResult, randomBiteDelay } from './game/hook.js?v=1';
+import { angleDelta, createFight } from './game/fight.js?v=1';
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-4.0';
+const VERSION = 'p0-5.0';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
@@ -30,6 +31,14 @@ let retryTimer = 0;
 let hookWindowOpen = false;
 let hookFinished = false;
 let hookFrame = 0;
+let fight = null;
+let fightFrame = 0;
+let fightReturnTimer = 0;
+let reelSound = null;
+let fightLastPhase = 'calm';
+let reelPointerId = null;
+let reelLastAngle = 0;
+let reelVisualTurns = 0;
 
 showVersion(VERSION);
 show('title');
@@ -95,6 +104,7 @@ function selectChoice(selector, selected) {
 /** @param {ScreenId} id */
 function show(id) {
   if (state.screen === 'bite' && id !== 'bite') clearBiteTimers();
+  if (state.screen === 'fight' && id !== 'fight') clearFight();
   state.screen = id;
   view.show(id);
   const index = FLOW.indexOf(id);
@@ -107,6 +117,7 @@ function show(id) {
   updateSelections();
   if (id === 'cast') prepareCast();
   if (id === 'bite') prepareBite();
+  if (id === 'fight') prepareFight();
 }
 
 function updateSelections() {
@@ -137,6 +148,8 @@ async function initializeExperience(button) {
         load('cast-whoosh', new URL('./sounds/cast_whoosh.wav?v=1', import.meta.url).href),
         load('splash', new URL('./sounds/splash.wav?v=1', import.meta.url).href),
         load('bite', new URL('./sounds/bite.wav?v=1', import.meta.url).href),
+        load('reel-loop', new URL('./sounds/reel_loop.wav?v=1', import.meta.url).href),
+        load('drag', new URL('./sounds/drag.wav?v=1', import.meta.url).href),
       ]);
     } catch (error) {
       audioReady = false;
@@ -313,4 +326,136 @@ function finishHook(success) {
   retryTimer = setTimeout(() => {
     if (state.screen === 'bite') show('cast');
   }, 2000);
+}
+
+const reel = document.getElementById('reel-control');
+reel.addEventListener('pointerdown', (event) => {
+  if (state.screen !== 'fight' || !fight) return;
+  reelPointerId = event.pointerId;
+  reel.setPointerCapture(event.pointerId);
+  reelLastAngle = pointerAngle(event, reel);
+  reel.classList.add('reeling');
+});
+reel.addEventListener('pointermove', (event) => {
+  if (event.pointerId !== reelPointerId || !fight) return;
+  const angle = pointerAngle(event, reel);
+  const turns = Math.abs(angleDelta(reelLastAngle, angle)) / (Math.PI * 2);
+  reelLastAngle = angle;
+  fight.reel(turns);
+  reelVisualTurns += turns;
+  reel.style.setProperty('--reel-angle', `${reelVisualTurns * 360}deg`);
+});
+reel.addEventListener('pointerup', stopReeling);
+reel.addEventListener('pointercancel', stopReeling);
+
+function stopReeling(event) {
+  if (event.pointerId !== reelPointerId) return;
+  reelPointerId = null;
+  reel.classList.remove('reeling');
+}
+
+function pointerAngle(event, element) {
+  const rect = element.getBoundingClientRect();
+  return Math.atan2(event.clientY - rect.top - rect.height / 2, event.clientX - rect.left - rect.width / 2);
+}
+
+function prepareFight() {
+  clearFight();
+  fight = createFight();
+  fightLastPhase = 'calm';
+  reelVisualTurns = 0;
+  reel.style.setProperty('--reel-angle', '0deg');
+  reel.classList.remove('reeling');
+  document.getElementById('fight-scene').className = 'panel fight-panel';
+  document.getElementById('fight-heading').textContent = '魚とファイト！';
+  document.getElementById('fight-command').textContent = 'ぐるぐる巻け！';
+  document.getElementById('fight-guide').textContent = '円の上を指でぐるぐる回すと、魚が近づきます。';
+  document.getElementById('fight-result').hidden = true;
+  document.getElementById('fish-distance').textContent = '100%';
+  document.getElementById('fight-timer').textContent = '20.0秒';
+  fight.start();
+  if (audioReady) {
+    reelSound = loopEngine('reel-loop');
+    reelSound.setGain(0);
+  }
+  fightFrame = requestAnimationFrame(updateFight);
+}
+
+function updateFight(now) {
+  if (state.screen !== 'fight' || !fight) return;
+  const status = fight.update(now);
+  document.getElementById('tension-fill').style.width = `${status.tension * 100}%`;
+  document.getElementById('distance-fill').style.width = `${(1 - status.remaining) * 100}%`;
+  document.getElementById('fish-distance').textContent = `${Math.ceil(status.remaining * 100)}%`;
+  document.getElementById('fight-timer').textContent = `${Math.max(0, (20000 - status.elapsedMs) / 1000).toFixed(1)}秒`;
+  if (reelSound) {
+    reelSound.setGain(status.reelSpeed * .34);
+    reelSound.setRate(.72 + status.reelSpeed * 1.35);
+  }
+
+  const panel = document.getElementById('fight-scene');
+  panel.classList.toggle('fight-warning', status.phase === 'warning');
+  panel.classList.toggle('fight-rush', status.phase === 'rush');
+  panel.classList.toggle('fight-danger', status.tension >= .78);
+  if (status.phase !== fightLastPhase) {
+    if (status.phase === 'warning') {
+      document.getElementById('fight-command').textContent = '来るぞ…指を離して！';
+      document.getElementById('fight-guide').textContent = '赤く光ったら巻くのを止めます。';
+      if (audioReady) play('drag', { gain: .85 });
+      shake(.9);
+    } else if (status.phase === 'rush') {
+      document.getElementById('fight-command').textContent = '魚が走る！止めて！';
+      document.getElementById('fight-guide').textContent = '今は巻かない！テンションを下げてください。';
+      shake(1.35);
+    } else {
+      document.getElementById('fight-command').textContent = '今だ！ぐるぐる巻け！';
+      document.getElementById('fight-guide').textContent = '危険が去りました。指で円を回してください。';
+    }
+    fightLastPhase = status.phase;
+  }
+
+  if (status.outcome !== 'playing') {
+    finishFight(status.outcome);
+    return;
+  }
+  fightFrame = requestAnimationFrame(updateFight);
+}
+
+function finishFight(outcome) {
+  cancelAnimationFrame(fightFrame);
+  if (reelSound) reelSound.stop();
+  reelSound = null;
+  const panel = document.getElementById('fight-scene');
+  const result = document.getElementById('fight-result');
+  result.hidden = false;
+  if (outcome === 'caught') {
+    panel.className = 'panel fight-panel fight-caught';
+    document.getElementById('fight-heading').textContent = '勝負あり！';
+    document.getElementById('fight-command').textContent = '魚を寄せた！！';
+    document.getElementById('fight-guide').textContent = 'ランディング成功！釣果を確認します。';
+    result.textContent = '釣り上げ成功！';
+    shake(1.1);
+    fightReturnTimer = setTimeout(() => {
+      if (state.screen === 'fight') show('result');
+    }, 1200);
+    return;
+  }
+  panel.className = 'panel fight-panel fight-broken';
+  document.getElementById('fight-heading').textContent = 'ラインブレイク！';
+  document.getElementById('fight-command').textContent = '巻きすぎた！';
+  document.getElementById('fight-guide').textContent = '赤い時は指を止めるとラインを守れます。';
+  result.textContent = '2秒後にもう一投できます。';
+  fightReturnTimer = setTimeout(() => {
+    if (state.screen === 'fight') show('cast');
+  }, 2000);
+}
+
+function clearFight() {
+  cancelAnimationFrame(fightFrame);
+  clearTimeout(fightReturnTimer);
+  if (reelSound) reelSound.stop();
+  reelSound = null;
+  fight = null;
+  reelPointerId = null;
+  reel.classList.remove('reeling');
 }

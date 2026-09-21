@@ -106,10 +106,27 @@
     .bite-fail { background: linear-gradient(#617786, #243b4b 52%, #112b3a); filter: saturate(.5); }
     .bite-result { min-height: 48px; margin: 12px 0 0; border-radius: 14px; padding: 12px; color: #dcf7ff; background: #ffffff0b; border: 1px solid #ffffff1b; text-align: center; font-size: 14px; font-weight: 800; line-height: 1.55; }
     .meter { height: 18px; overflow: hidden; border: 3px solid #e8fbff; border-radius: 999px; background: #102633; }
-    .meter > span { display: block; width: 62%; height: 100%; background: linear-gradient(90deg, #61e2aa 0 55%, #ffd15e 72%, #ff5d69 100%); }
+    .meter > span { display: block; width: 28%; height: 100%; background: linear-gradient(90deg, #61e2aa 0 55%, #ffd15e 72%, #ff5d69 100%); transition: width .08s linear; }
     .meter-labels { display: flex; justify-content: space-between; margin-top: 6px; color: #b9d7e1; font-size: 11px; }
-    .reel { display: grid; place-items: center; width: 150px; height: 150px; margin: 18px auto; border: 12px solid #a8eaff; border-radius: 50%; background: #082538; box-shadow: inset 0 0 0 7px #17475e, 0 15px 30px #0007; }
-    .reel::after { content: ""; width: 42px; height: 42px; border-radius: 50%; background: #ffcf58; box-shadow: 38px -32px 0 -7px #ebfaff; }
+    .fight-panel { position: relative; overflow: hidden; transition: background .2s ease, box-shadow .2s ease; }
+    .fight-status { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: #cce8f0; font-size: 13px; font-weight: 850; }
+    .distance-meter { height: 10px; margin: 7px 0 14px; overflow: hidden; border-radius: 999px; background: #ffffff17; }
+    .distance-meter span { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #5ed9f7, #73efad); transition: width .08s linear; }
+    .fight-command { min-height: 38px; margin: 13px 0 0; color: #8ef1ff; text-align: center; font-size: 24px; font-weight: 950; }
+    .fight-guide { min-height: 44px; margin: 4px 0 0; color: #c5e0e8; text-align: center; font-size: 13px; line-height: 1.5; }
+    .reel { --reel-angle: 0deg; touch-action: none; user-select: none; position: relative; display: grid; place-items: center; width: 188px; height: 188px; margin: 14px auto; border: 14px solid #a8eaff; border-radius: 50%; background: radial-gradient(circle, #194c64, #082538 65%); box-shadow: inset 0 0 0 7px #17475e, 0 15px 30px #0007; transform: rotate(var(--reel-angle)); }
+    .reel::before { content: "ぐるぐる"; color: #bfeaf4; font-size: 14px; font-weight: 900; }
+    .reel::after { content: ""; position: absolute; right: 12px; top: 12px; width: 46px; height: 46px; border: 7px solid #fff6c3; border-radius: 50%; background: #ffcf58; box-shadow: 0 6px 14px #0007; }
+    .reel.reeling { border-color: #76efb1; box-shadow: inset 0 0 0 7px #17475e, 0 0 30px #76efb188; }
+    .fight-warning, .fight-rush { background: #4b1b27d9; box-shadow: inset 0 0 40px #ff566b66, 0 20px 50px #00101d80; }
+    .fight-warning { animation: warning-pulse .32s ease-in-out infinite alternate; }
+    @keyframes warning-pulse { to { transform: scale(.99); box-shadow: inset 0 0 75px #ff526f99; } }
+    .fight-rush .fight-command, .fight-danger .fight-command { color: #ff7f8c; }
+    .fight-danger { outline: 4px solid #ff5267; animation: danger-pulse .18s ease-in-out infinite alternate; }
+    @keyframes danger-pulse { to { outline-color: #fff; } }
+    .fight-caught { background: linear-gradient(145deg, #0a725e, #145873); }
+    .fight-broken { background: linear-gradient(145deg, #4d2830, #202d38); }
+    .fight-result { margin: 10px 0 0; border-radius: 13px; padding: 11px; color: #fff; background: #ffffff12; text-align: center; font-weight: 900; }
     .catch { display: grid; place-items: center; min-height: 270px; border-radius: 26px; background: radial-gradient(circle, #3db9d65e, transparent 64%); text-align: center; }
     .catch .fish { font-size: 120px; filter: drop-shadow(0 18px 22px #0009); }
     .size { margin: 4px 0 0; font-size: 48px; font-weight: 950; letter-spacing: -.05em; }
@@ -197,9 +214,16 @@
     </section>
 
     <section id="fight" class="screen" hidden>
-      <p class="eyebrow">S-07 FIGHT</p><h2>魚とファイト！</h2>
-      <div class="panel"><p class="selected-line">ラインテンション</p><div class="meter"><span></span></div><div class="meter-labels"><span>ゆるい</span><span>ちょうどいい</span><span>危険</span></div><div class="reel" aria-label="リールノブの見本"></div><p class="lead">画面のノブを指でぐるぐる回してリールを巻きます。</p></div>
-      <div class="footer-actions"><button data-go="result">釣り上げる</button></div>
+      <p class="eyebrow">S-07 FIGHT</p><h2 id="fight-heading">魚とファイト！</h2>
+      <div id="fight-scene" class="panel fight-panel">
+        <div class="fight-status"><span>魚との距離 <b id="fish-distance">100%</b></span><span>残り <b id="fight-timer">20.0秒</b></span></div>
+        <div class="distance-meter" aria-label="魚を寄せた量"><span id="distance-fill"></span></div>
+        <p class="selected-line">ラインテンション</p><div class="meter"><span id="tension-fill"></span></div><div class="meter-labels"><span>安全</span><span>注意</span><span>危険</span></div>
+        <p id="fight-command" class="fight-command">ぐるぐる巻け！</p>
+        <div id="reel-control" class="reel" role="slider" aria-label="指で円を描いてリールを巻く"></div>
+        <p id="fight-guide" class="fight-guide">円の上を指でぐるぐる回すと、魚が近づきます。</p>
+        <p id="fight-result" class="fight-result" hidden></p>
+      </div>
     </section>
 
     <section id="result" class="screen" hidden>
@@ -216,6 +240,6 @@
       <div class="footer-actions"><button data-go="point">もう一投</button><button class="secondary" data-go="title">タイトルへ戻る</button></div>
     </section>
   </main>
-  <script type="module" src="./app.js?v=4"></script>
+  <script type="module" src="./app.js?v=5"></script>
 </body>
 </html>
