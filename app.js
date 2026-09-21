@@ -1,15 +1,15 @@
 // @ts-check
 
-import { requestMotion, startMotion, createMotionTracker } from './lib/sensors.js?v=1';
+import { requestMotion, startMotion, createMotionTracker } from './lib/sensors.js?v=2';
 import { unlock, load, play, loopEngine } from './lib/audio.js?v=1';
 import { screens, shake, toast, showVersion } from './lib/ui.js?v=2';
 import { listenForCasts } from './game/cast.js?v=2';
-import { P as HOOK_P, hookResult, randomBiteDelay } from './game/hook.js?v=1';
+import { P as HOOK_P, hookResult, randomBiteDelay } from './game/hook.js?v=2';
 import { angleDelta, createFight } from './game/fight.js?v=1';
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-5.1';
+const VERSION = 'p0-5.2';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
@@ -262,6 +262,7 @@ function prepareBite() {
 
 function triggerBite() {
   if (state.screen !== 'bite' || hookFinished) return;
+  tracker.resetGesture();
   hookWindowOpen = true;
   const scene = document.getElementById('bite-scene');
   scene.className = 'scene bite-stage bite-now';
@@ -281,11 +282,13 @@ function checkHookMotion() {
   const result = hookResult({
     peakLin: tracker.peakLin,
     omega: tracker.omega,
+    pitchOmega: tracker.peakPitchOmega,
     upness: tracker.upness,
     durMs: 0,
   });
   document.getElementById('bite-debug-peak').textContent = result.peakLin.toFixed(2);
   document.getElementById('bite-debug-upness').textContent = result.upness.toFixed(2);
+  document.getElementById('bite-debug-pitch').textContent = result.pitchOmega.toFixed(2);
   if (result.ok) {
     finishHook(true);
     return;
