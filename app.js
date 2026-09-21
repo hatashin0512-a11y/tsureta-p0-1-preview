@@ -6,10 +6,14 @@ import { screens, shake, toast, showVersion } from './lib/ui.js?v=2';
 import { listenForCasts } from './game/cast.js?v=2';
 import { P as HOOK_P, hookResult, randomBiteDelay } from './game/hook.js?v=2';
 import { angleDelta, createFight } from './game/fight.js?v=1';
+import { drawCatch } from './game/lottery.js?v=1';
+import { recordCatch } from './game/dex.js?v=1';
+import { renderCatchCard } from './game/card.js?v=1';
+import { shareBlob } from './lib/capture.js?v=1';
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-5.2';
+const VERSION = 'p0-6.0';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
@@ -17,7 +21,14 @@ const state = {
   screen: /** @type {ScreenId} */ ('title'),
   region: '東京湾エリア',
   point: '夕凪堤防',
+  castPower: 0,
+  catchData: null,
 };
+const fishDataPromise = fetch(new URL('./data/fish.json?v=1', import.meta.url), { cache: 'force-cache' })
+  .then((response) => {
+    if (!response.ok) throw new Error(`fish.json: ${response.status}`);
+    return response.json();
+  });
 const tracker = createMotionTracker();
 let motionReady = false;
 let audioReady = false;
@@ -39,6 +50,8 @@ let fightLastPhase = 'calm';
 let reelPointerId = null;
 let reelLastAngle = 0;
 let reelVisualTurns = 0;
+let resultPreparing = false;
+let cardBlob = null;
 
 showVersion(VERSION);
 show('title');
@@ -68,6 +81,16 @@ document.addEventListener('click', (event) => {
     const debug = document.getElementById('bite-debug');
     debug.hidden = !debug.hidden;
     button.setAttribute('aria-expanded', String(!debug.hidden));
+    return;
+  }
+
+  if (button.id === 'save-card') {
+    saveCatchCard(button);
+    return;
+  }
+
+  if (button.id === 'share-card') {
+    shareCatchCard(button);
     return;
   }
 
@@ -118,6 +141,8 @@ function show(id) {
   if (id === 'cast') prepareCast();
   if (id === 'bite') prepareBite();
   if (id === 'fight') prepareFight();
+  if (id === 'result') prepareResult();
+  if (id === 'card') updateCardPreview();
 }
 
 function updateSelections() {
@@ -150,6 +175,10 @@ async function initializeExperience(button) {
         load('bite', new URL('./sounds/bite.wav?v=1', import.meta.url).href),
         load('reel-loop', new URL('./sounds/reel_loop.wav?v=1', import.meta.url).href),
         load('drag', new URL('./sounds/drag.wav?v=1', import.meta.url).href),
+        load('landing', new URL('./sounds/landing_splash.wav?v=1', import.meta.url).href),
+        load('fanfare-n', new URL('./sounds/fanfare_n.wav?v=1', import.meta.url).href),
+        load('fanfare-r', new URL('./sounds/fanfare_r.wav?v=1', import.meta.url).href),
+        load('fanfare-sr', new URL('./sounds/fanfare_sr.wav?v=1', import.meta.url).href),
       ]);
     } catch (error) {
       audioReady = false;
@@ -168,6 +197,8 @@ function prepareCast() {
   clearTimeout(splashTimer);
   castArmed = false;
   castInFlight = false;
+  state.catchData = null;
+  cardBlob = null;
   tracker.calibrate();
   const scene = document.getElementById('cast-scene');
   scene.classList.remove('cast-fired', 'cast-splash');
@@ -207,6 +238,7 @@ listenForCasts(tracker, (result) => {
 
   castArmed = false;
   castInFlight = true;
+  state.castPower = result.power;
   const scene = document.getElementById('cast-scene');
   scene.style.setProperty('--cast-power', result.power.toFixed(3));
   scene.style.setProperty('--cast-x', `${54 + result.power * 34}%`);
@@ -461,4 +493,130 @@ function clearFight() {
   fight = null;
   reelPointerId = null;
   reel.classList.remove('reeling');
+}
+
+async function prepareResult() {
+  if (state.catchData) {
+    updateResultScreen(state.catchData, false);
+    return;
+  }
+  if (resultPreparing) return;
+  resultPreparing = true;
+  document.getElementById('result-heading').textContent = '水面に何かいる…！';
+  document.getElementById('result-fish').hidden = true;
+  document.getElementById('result-name').textContent = '釣果を確認中';
+  document.getElementById('result-card-button').disabled = true;
+  try {
+    const fish = await fishDataPromise;
+    const catchResult = drawCatch(fish, { pointId: 'pier', castPower: state.castPower });
+    const dex = recordCatch(catchResult.species, catchResult.cm);
+    const badge = catchResult.monster ? 'モンスター級！'
+      : dex.first ? '初ゲット！'
+        : dex.best ? '自己ベスト！' : 'ナイスキャッチ！';
+    state.catchData = { ...catchResult, dex, badge };
+    updateResultScreen(state.catchData, true);
+  } catch (error) {
+    console.error(error);
+    document.getElementById('result-heading').textContent = '釣果を読み込めませんでした';
+    document.getElementById('result-name').textContent = 'もう一度お試しください';
+    toast('魚データを読み込めませんでした');
+  } finally {
+    resultPreparing = false;
+  }
+}
+
+function updateResultScreen(caught, animate) {
+  document.getElementById('result-heading').textContent = '釣れた！';
+  document.getElementById('result-fish').src = caught.species.art;
+  document.getElementById('result-fish').alt = caught.species.name_ja;
+  document.getElementById('result-fish').hidden = false;
+  document.getElementById('result-rarity').textContent = caught.rarity;
+  document.getElementById('result-size').textContent = `${caught.cm.toFixed(1)} cm`;
+  document.getElementById('result-name').textContent = caught.species.name_ja;
+  document.getElementById('result-badge').textContent = caught.badge;
+  document.getElementById('result-dex').textContent = `${caught.dex.speciesCount} / 3種`;
+  document.getElementById('result-count').textContent = `${caught.dex.entry.game.count}匹目`;
+  document.getElementById('result-card-button').disabled = false;
+  const scene = document.getElementById('result-catch');
+  scene.className = `catch rarity-${caught.rarity.toLowerCase()}${animate ? ' catch-reveal' : ''}`;
+  if (animate) {
+    if (audioReady) play('landing', { gain: .9 });
+    shake(1.15);
+    setTimeout(() => {
+      if (state.screen !== 'result' || !audioReady) return;
+      play(`fanfare-${caught.rarity.toLowerCase()}`, { gain: .8 });
+    }, 520);
+  }
+}
+
+function appUrl() {
+  const url = new URL('./', location.href);
+  url.search = '';
+  url.hash = '';
+  return url.href;
+}
+
+function updateCardPreview() {
+  const caught = state.catchData;
+  if (!caught) return;
+  document.getElementById('card-fish').src = caught.species.art;
+  document.getElementById('card-fish').alt = caught.species.name_ja;
+  document.getElementById('card-name').textContent = caught.species.name_ja;
+  document.getElementById('card-size').textContent = `${caught.cm.toFixed(1)} cm`;
+  document.getElementById('card-badge').textContent = caught.badge;
+  document.getElementById('card-rarity').textContent = caught.rarity;
+  document.getElementById('card-point').textContent = state.point;
+  document.getElementById('card-url').textContent = appUrl();
+  document.getElementById('card-preview').className = `card-preview rarity-${caught.rarity.toLowerCase()}`;
+}
+
+async function ensureCardBlob() {
+  if (cardBlob) return cardBlob;
+  const caught = state.catchData;
+  if (!caught) throw new Error('Catch result is not ready');
+  cardBlob = await renderCatchCard({
+    species: caught.species,
+    cm: caught.cm,
+    rarity: caught.rarity,
+    badge: caught.badge,
+    point: state.point,
+    condition: '夕まずめ・晴れ・上げ潮',
+    appUrl: appUrl(),
+  });
+  return cardBlob;
+}
+
+async function saveCatchCard(button) {
+  button.disabled = true;
+  button.textContent = '画像を作成中…';
+  try {
+    const blob = await ensureCardBlob();
+    const result = await shareBlob(blob, `${state.catchData.species.name_ja} ${state.catchData.cm.toFixed(1)}cmを釣った！ #釣れた`);
+    toast(result === 'shared' ? '共有メニューから画像を保存できます' : 'カード画像を保存しました');
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      console.error(error);
+      toast('カードを保存できませんでした');
+    }
+  } finally {
+    button.disabled = false;
+    button.textContent = 'カード保存';
+  }
+}
+
+async function shareCatchCard(button) {
+  button.disabled = true;
+  button.textContent = '準備中…';
+  try {
+    const blob = await ensureCardBlob();
+    await shareBlob(blob, `${state.catchData.species.name_ja} ${state.catchData.cm.toFixed(1)}cmを釣った！ #釣れた`);
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      console.error(error);
+      toast('共有を開始できませんでした');
+    }
+  } finally {
+    button.disabled = false;
+    button.textContent = 'シェア';
+  }
 }

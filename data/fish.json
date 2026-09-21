@@ -1,0 +1,5 @@
+[
+  {"id":"aji","name_ja":"マアジ","name_en":"Japanese horse mackerel","rarity":"N","habitat":["pier"],"season":[4,5,6,7,8,9,10,11],"size_cm":{"min":12,"typical":22,"max":45},"fight":{"hp":60,"pattern":"run","power":0.4},"real_note":"堤防のサビキで狙える入門魚","regulation_note":"地域・時期により規制が異なる場合があります","art":"assets/fish/aji.svg"},
+  {"id":"kurodai","name_ja":"クロダイ","name_en":"Black sea bream","rarity":"R","habitat":["pier"],"season":[3,4,5,6,7,8,9,10,11],"size_cm":{"min":20,"typical":38,"max":60},"fight":{"hp":82,"pattern":"dive","power":0.65},"real_note":"力強い引きで人気の沿岸魚","regulation_note":"地域・時期により規制が異なる場合があります","art":"assets/fish/kurodai.svg"},
+  {"id":"madai","name_ja":"マダイ","name_en":"Red sea bream","rarity":"SR","habitat":["pier"],"season":[3,4,5,6,9,10,11],"size_cm":{"min":25,"typical":48,"max":80},"fight":{"hp":100,"pattern":"slack","power":0.85},"real_note":"祝い魚としても親しまれる代表的な海水魚","regulation_note":"地域・時期により規制が異なる場合があります","art":"assets/fish/madai.svg"}
+]

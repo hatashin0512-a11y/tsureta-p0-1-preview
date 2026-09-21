@@ -23,6 +23,7 @@
     @keyframes drift { to { transform: translateY(38px); } }
     button { appearance: none; border: 0; min-height: 52px; border-radius: 16px; padding: 12px 17px; color: #062236; background: linear-gradient(135deg, #9af2ff, #5fd7f7); box-shadow: 0 10px 28px #00101f70; font: inherit; font-weight: 900; letter-spacing: .02em; }
     button:active { transform: scale(.98); }
+    button:disabled { opacity: .48; filter: saturate(.3); }
     button.secondary { color: var(--ink); background: #ffffff12; border: 1px solid #ffffff27; box-shadow: none; }
     button.selected { outline: 3px solid var(--mint); color: #062d22; background: linear-gradient(135deg, #a2f8ca, #65dfa4); }
     .app { position: relative; width: min(100%, 560px); min-height: 100svh; margin: auto; padding: calc(22px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); }
@@ -133,7 +134,11 @@
     .fight-broken { background: linear-gradient(145deg, #4d2830, #202d38); }
     .fight-result { margin: 10px 0 0; border-radius: 13px; padding: 11px; color: #fff; background: #ffffff12; text-align: center; font-weight: 900; }
     .catch { display: grid; place-items: center; min-height: 270px; border-radius: 26px; background: radial-gradient(circle, #3db9d65e, transparent 64%); text-align: center; }
-    .catch .fish { font-size: 120px; filter: drop-shadow(0 18px 22px #0009); }
+    .catch .fish { width: min(74%, 280px); height: 170px; object-fit: contain; filter: drop-shadow(0 18px 22px #0009); }
+    .catch-reveal .fish { animation: catch-rise 1.05s cubic-bezier(.17,.86,.35,1.2) both; }
+    @keyframes catch-rise { from { opacity: 0; transform: translateY(150px) rotate(-15deg) scale(.35); } 65% { opacity: 1; transform: translateY(-28px) rotate(5deg) scale(1.15); } }
+    .rarity-r { box-shadow: inset 0 0 70px #76efb138; }
+    .rarity-sr { box-shadow: inset 0 0 90px #ffcf5855, 0 0 32px #ffcf5828; }
     .size { margin: 4px 0 0; font-size: 48px; font-weight: 950; letter-spacing: -.05em; }
     .rarity { display: inline-block; border-radius: 999px; padding: 6px 13px; color: #201600; background: linear-gradient(135deg, #fff2a8, #ffbd46); font-weight: 950; }
     .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
@@ -142,10 +147,12 @@
     .result-grid span { color: var(--muted); font-size: 10px; }
     .card-preview { aspect-ratio: 4 / 5; display: grid; align-content: space-between; margin: 0 auto; max-width: 390px; border: 8px solid #e7faff; border-radius: 28px; padding: 24px; background: radial-gradient(circle at 50% 36%, #29b2d3, #0a5271 52%, #06243a); box-shadow: 0 24px 60px #0009; text-align: center; }
     .card-preview .brand { color: #aef1ff; font-size: 13px; font-weight: 900; letter-spacing: .16em; }
-    .card-preview .fish { font-size: 106px; }
+    .card-preview .fish { width: min(82%, 260px); height: 145px; object-fit: contain; filter: drop-shadow(0 15px 18px #0008); }
     .card-preview h3 { margin: 0; font-size: 34px; }
     .card-preview .card-size { margin: 4px 0; font-size: 51px; font-weight: 950; }
     .card-preview small { color: #c7e3ec; }
+    .card-rarity { display: inline-block; margin-bottom: 6px; color: #ffdc72; font-size: 13px; font-weight: 950; letter-spacing: .15em; }
+    .card-url { display: block; margin-top: 8px; overflow-wrap: anywhere; color: #8ddded; font-size: 10px; }
     .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 13px; }
     .action-grid button { min-height: 62px; padding: 9px 4px; font-size: 12px; }
     .selected-line { margin: 0 0 12px; color: #aee8f5; font-size: 13px; }
@@ -189,8 +196,8 @@
       <p class="eyebrow">S-04 FISHING POINT</p><h2>釣り場を選ぶ</h2><p class="lead">場所ごとに景色と登場する魚が変わります。</p>
       <div class="panel stack">
         <button class="choice selected" data-point="夕凪堤防" aria-pressed="true"><span class="icon">⚓</span><span>夕凪堤防<small>初心者向け・アジの気配</small></span><span class="arrow">✓</span></button>
-        <button class="choice" data-point="星見サーフ" aria-pressed="false"><span class="icon">🏖️</span><span>星見サーフ<small>広い砂浜・遠投向け</small></span><span class="arrow">›</span></button>
-        <button class="choice" data-point="青波磯" aria-pressed="false"><span class="icon">🪨</span><span>青波磯<small>強い魚が潜む岩場</small></span><span class="arrow">›</span></button>
+        <button class="choice" disabled><span class="icon">🏖️</span><span>星見サーフ<small>今後追加予定</small></span><span class="arrow">🔒</span></button>
+        <button class="choice" disabled><span class="icon">🪨</span><span>青波磯<small>今後追加予定</small></span><span class="arrow">🔒</span></button>
       </div>
       <div class="footer-actions"><button data-go="cast">ここで釣る</button></div>
     </section>
@@ -233,19 +240,19 @@
     </section>
 
     <section id="result" class="screen" hidden>
-      <p class="eyebrow">S-08 LANDING &amp; RESULT</p><h2>釣れた！</h2>
-      <div class="catch"><div><div class="fish">🐟</div><span class="rarity">RARE</span><p class="size">32.4 cm</p><h3>マアジ</h3></div></div>
-      <div class="result-grid"><div><b>自己ベスト</b><span>NEW RECORD</span></div><div><b>412 g</b><span>推定重量</span></div><div><b>1 / 30種</b><span>ゲーム図鑑</span></div></div>
-      <div class="footer-actions"><button data-go="card">釣果カードを見る</button></div>
+      <p class="eyebrow">S-08 LANDING &amp; RESULT</p><h2 id="result-heading">釣れた！</h2>
+      <div id="result-catch" class="catch"><div><img id="result-fish" class="fish" src="./assets/fish/aji.svg" alt="魚"><span id="result-rarity" class="rarity">---</span><p id="result-size" class="size">--.- cm</p><h3 id="result-name">釣果を確認中</h3></div></div>
+      <div class="result-grid"><div><b id="result-badge">---</b><span>獲得バッジ</span></div><div><b id="result-count">---</b><span>この魚の釣果</span></div><div><b id="result-dex">- / 3種</b><span>ゲーム図鑑</span></div></div>
+      <div class="footer-actions"><button id="result-card-button" data-go="card" disabled>釣果カードを見る</button></div>
     </section>
 
     <section id="card" class="screen" hidden>
       <p class="eyebrow">S-09 CATCH CARD</p><h2>見せたくなる1枚</h2>
-      <div class="card-preview"><div class="brand">TSURETA! MOTION FISHING</div><div><div class="fish">🐟</div><h3>マアジ</h3><p class="card-size">32.4 cm</p><span class="rarity">自己ベスト</span></div><small>夕凪堤防・夕まずめ<br>#釣れた</small></div>
-      <div class="action-grid"><button class="secondary" data-notice="動画保存は後続PRで実装します">動画</button><button class="secondary" data-notice="カード保存は後続PRで実装します">カード保存</button><button class="secondary" data-notice="共有は後続PRで実装します">シェア</button></div>
+      <div id="card-preview" class="card-preview"><div class="brand">TSURETA! MOTION FISHING</div><div><img id="card-fish" class="fish" src="./assets/fish/aji.svg" alt="魚"><span id="card-rarity" class="card-rarity">N</span><h3 id="card-name">マアジ</h3><p id="card-size" class="card-size">--.- cm</p><span id="card-badge" class="rarity">ナイスキャッチ！</span></div><small><span id="card-point">夕凪堤防</span>・夕まずめ<br>#釣れた<span id="card-url" class="card-url"></span></small></div>
+      <div class="action-grid"><button class="secondary" data-notice="動画保存は後続工程で実装します">動画</button><button id="save-card" class="secondary">カード保存</button><button id="share-card" class="secondary">シェア</button></div>
       <div class="footer-actions"><button data-go="point">もう一投</button><button class="secondary" data-go="title">タイトルへ戻る</button></div>
     </section>
   </main>
-  <script type="module" src="./app.js?v=7"></script>
+  <script type="module" src="./app.js?v=8"></script>
 </body>
 </html>
