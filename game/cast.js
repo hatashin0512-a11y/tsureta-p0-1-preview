@@ -3,7 +3,7 @@
  * can replace them with real-device measurements without rewriting the logic.
  */
 export const P = Object.freeze({
-  castMin: 2.0,
+  castMin: 1.2,
   castFull: 6.5,
   distMax: 45,
   castCooldown: 600,

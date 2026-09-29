@@ -3,7 +3,7 @@
 import { requestMotion, startMotion, createMotionTracker } from './lib/sensors.js?v=2';
 import { unlock, load, play, loopEngine } from './lib/audio.js?v=1';
 import { screens, shake, toast, showVersion } from './lib/ui.js?v=2';
-import { P as CAST_P, castResult, listenForCasts } from './game/cast.js?v=2';
+import { P as CAST_P, castResult, listenForCasts } from './game/cast.js?v=3';
 import { P as HOOK_P, hookResult, randomBiteDelay } from './game/hook.js?v=2';
 import { angleDelta, createFight } from './game/fight.js?v=1';
 import { drawCatch } from './game/lottery.js?v=1';
@@ -14,7 +14,7 @@ import { boostForPlayCount, completePlay, getPlayCount, markSafetySeen, safetySe
 
 /** @typedef {import('./types.js').ScreenId} ScreenId */
 
-const VERSION = 'p0-7.0';
+const VERSION = 'p0-8.0';
 /** @type {ScreenId[]} */
 const FLOW = ['title', 'region', 'conditions', 'point', 'cast', 'bite', 'fight', 'result', 'card'];
 const view = screens(FLOW);
